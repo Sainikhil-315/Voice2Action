@@ -15,6 +15,7 @@ import {
   X,
   Filter,
   TrendingUp,
+  FileText,
 } from "lucide-react";
 import {
   MapContainer,
@@ -27,6 +28,7 @@ import {
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { authoritiesAPI } from "../../utils/api";
+import LoadingButton from "../common/LoadingButton";
 
 // Fix for default marker icons in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -76,7 +78,7 @@ const MapUpdater = ({ center, zoom }) => {
 const AuthorityDashboard = ({ authority, token, onLogout }) => {
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [resolving, setResolving] = useState(null);
+  const [actionLoading, setActionLoading] = useState({});
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [route, setRoute] = useState(null);
@@ -112,7 +114,6 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
     const fetchIssues = async () => {
       setLoading(true);
       try {
-        // Replace with your actual API call
         const response = await authoritiesAPI.getAssignedIssues(
           authority.id,
           token
@@ -150,7 +151,6 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
       const { lat: destLat, lng: destLng } = issue.location.coordinates;
       const { lat: startLat, lng: startLng } = userLocation;
 
-      // Using OSRM for routing
       const url = `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${destLng},${destLat}?overview=full&geometries=geojson`;
 
       const response = await fetch(url);
@@ -163,8 +163,8 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
         ]);
         setRoute({
           coordinates,
-          distance: (data.routes[0].distance / 1000).toFixed(2), // km
-          duration: Math.round(data.routes[0].duration / 60), // minutes
+          distance: (data.routes[0].distance / 1000).toFixed(2),
+          duration: Math.round(data.routes[0].duration / 60),
         });
       }
     } catch (error) {
@@ -186,28 +186,39 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
 
   // Handle issue status update
   const handleStatusUpdate = async (issueId, newStatus) => {
-    setResolving(issueId);
+    // Set loading state for specific action
+    setActionLoading((prev) => ({
+      ...prev,
+      [`${issueId}-${newStatus}`]: true,
+    }));
+
     try {
-      console.log("Authority, issueId", authority.id, issueId);
       const response = await authoritiesAPI.updateIssueStatus(
         authority.id,
         issueId,
-        {}
+        { status: newStatus },
+        token
       );
-      if (!response.ok) throw new Error("Failed to update status");
 
-      setIssues((issues) =>
-        issues.map((i) => (i._id === issueId ? { ...i, status: newStatus } : i))
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to update status");
+      }
+
+      // Update issues list
+      setIssues((prevIssues) =>
+        prevIssues.map((i) =>
+          i._id === issueId ? { ...i, status: newStatus } : i
+        )
       );
 
       // Update stats
       setStats((prev) => {
         const updated = { ...prev };
         if (newStatus === "in_progress") {
-          updated.assigned--;
+          updated.assigned = Math.max(0, updated.assigned - 1);
           updated.inProgress++;
         } else if (newStatus === "resolved") {
-          updated.inProgress--;
+          updated.inProgress = Math.max(0, updated.inProgress - 1);
           updated.resolved++;
         }
         return updated;
@@ -220,9 +231,13 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
       );
     } catch (err) {
       console.error("Failed to update issue:", err);
-      alert("Failed to update issue status");
+      alert(err.response?.data?.message || "Failed to update issue status");
     } finally {
-      setResolving(null);
+      setActionLoading((prev) => {
+        const updated = { ...prev };
+        delete updated[`${issueId}-${newStatus}`];
+        return updated;
+      });
     }
   };
 
@@ -234,7 +249,7 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
 
   // Calculate distance between two points
   const calculateDistance = (lat1, lng1, lat2, lng2) => {
-    const R = 6371; // Radius of Earth in km
+    const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLng = ((lng2 - lng1) * Math.PI) / 180;
     const a =
@@ -422,23 +437,23 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
             {filteredIssues.map((issue) => (
               <div
                 key={issue._id}
-                className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow border overflow-hidden"
+                className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow border overflow-hidden flex flex-col h-full"
               >
-                {/* Issue Header */}
-                <div className="p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50">
+                {/* Issue Header - Fixed Height */}
+                <div className="p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50 flex-shrink-0">
                   <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-bold text-gray-900 flex-1 pr-4">
+                    <h3 className="text-lg font-bold text-gray-900 flex-1 pr-4 line-clamp-2">
                       {issue.title}
                     </h3>
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${getPriorityColor(
+                      className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 ${getPriorityColor(
                         issue.priority
                       )}`}
                     >
                       {issue.priority?.toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2 min-h-[40px]">
                     {issue.description}
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -455,16 +470,16 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
                   </div>
                 </div>
 
-                {/* Issue Details */}
-                <div className="p-6 space-y-4">
+                {/* Issue Details - Flexible Height */}
+                <div className="p-6 space-y-4 flex-grow">
                   {/* Location */}
                   <div className="flex items-start space-x-3">
                     <MapPin className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">
                         Location
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 truncate">
                         {issue.location?.address || "No address provided"}
                       </p>
                       {userLocation && issue.location?.coordinates && (
@@ -485,22 +500,24 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
                   {/* Reporter Info */}
                   <div className="flex items-start space-x-3">
                     <User className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900">
                         Reported by
                       </p>
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-gray-600 truncate">
                         {issue.reporter?.name || "Anonymous"}
                       </p>
                       {issue.reporter?.email && (
-                        <p className="text-xs text-gray-500 flex items-center mt-1">
-                          <Mail className="w-3 h-3 mr-1" />
-                          {issue.reporter.email}
+                        <p className="text-xs text-gray-500 flex items-center mt-1 truncate">
+                          <Mail className="w-3 h-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">
+                            {issue.reporter.email}
+                          </span>
                         </p>
                       )}
                       {issue.reporter?.phone && (
                         <p className="text-xs text-gray-500 flex items-center mt-1">
-                          <Phone className="w-3 h-3 mr-1" />
+                          <Phone className="w-3 h-3 mr-1 flex-shrink-0" />
                           {issue.reporter.phone}
                         </p>
                       )}
@@ -520,32 +537,53 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
                     </div>
                   </div>
 
-                  {/* Media */}
-                  {issue.media && issue.media.length > 0 && (
-                    <div className="flex items-start space-x-3">
-                      <ImageIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 mb-2">
-                          Attachments
-                        </p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {issue.media.slice(0, 3).map((media, idx) => (
-                            <img
-                              key={idx}
-                              src={media.url}
-                              alt={`Evidence ${idx + 1}`}
-                              className="w-full h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => window.open(media.url, "_blank")}
-                            />
-                          ))}
+                  {/* Media - Fixed Height Container */}
+                  <div className="flex items-start space-x-3 min-h-[88px]">
+                    {issue.media && issue.media.length > 0 ? (
+                      <>
+                        <ImageIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 mb-2">
+                            Attachments ({issue.media.length})
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            {issue.media.slice(0, 3).map((media, idx) => (
+                              <img
+                                key={idx}
+                                src={media.url}
+                                alt={`Evidence ${idx + 1}`}
+                                className="w-full h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => window.open(media.url, "_blank")}
+                              />
+                            ))}
+                          </div>
+                          {issue.media.length > 3 && (
+                            <p className="text-xs text-gray-500 mt-2">
+                              +{issue.media.length - 3} more
+                            </p>
+                          )}
                         </div>
-                      </div>
-                    </div>
-                  )}
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 mb-2">
+                            Attachments
+                          </p>
+                          <div className="flex items-center justify-center h-20 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
+                            <p className="text-xs text-gray-400">
+                              No media attached
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="p-6 pt-0 space-y-3">
+                {/* Action Buttons - Fixed Height */}
+                <div className="p-6 pt-0 space-y-3 flex-shrink-0">
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => {
@@ -567,42 +605,36 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
                   </div>
 
                   {issue.status !== "resolved" && (
-                    <div className="grid grid-cols-2 gap-3">
-                      {(issue.status === "assigned" ||
-                        issue.status === "in_progress") && (
-                        <button
+                    <div
+                      className={`grid ${
+                        issue.status === "assigned"
+                          ? "grid-cols-2"
+                          : "grid-cols-1"
+                      } gap-3`}
+                    >
+                      {issue.status === "assigned" && (
+                        <LoadingButton
+                          loading={actionLoading[`${issue._id}-in_progress`]}
                           onClick={() =>
                             handleStatusUpdate(issue._id, "in_progress")
                           }
-                          disabled={
-                            issue.status === "in_progress"
-                          }
                           className="flex items-center justify-center px-4 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors font-medium disabled:opacity-50"
                         >
-                          {resolving === issue._id ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Clock className="w-4 h-4 mr-2" />
-                          )}
-                          {issue.status === "in_progress"
-                            ? "Working on it"
-                            : "Start Work"}
-                        </button>
+                          <Clock className="w-4 h-4 mr-2" />
+                          Start Work
+                        </LoadingButton>
                       )}
-                      <button
+
+                      <LoadingButton
+                        loading={actionLoading[`${issue._id}-resolved`]}
                         onClick={() =>
                           handleStatusUpdate(issue._id, "resolved")
                         }
-                        disabled={resolving === issue._id}
-                        className={`flex items-center justify-center px-4 py-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors font-medium disabled:opacity-50 col-span-1`}
+                        className="flex items-center justify-center px-4 py-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 transition-colors font-medium disabled:opacity-50"
                       >
-                        {resolving === issue._id ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                        )}
+                        <CheckCircle className="w-4 h-4 mr-2" />
                         Mark Resolved
-                      </button>
+                      </LoadingButton>
                     </div>
                   )}
 
@@ -691,7 +723,6 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                   />
 
-                  {/* User location marker */}
                   {userLocation && (
                     <Marker
                       position={[userLocation.lat, userLocation.lng]}
@@ -701,7 +732,6 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
                     </Marker>
                   )}
 
-                  {/* Issue location marker */}
                   {selectedIssue.location?.coordinates && (
                     <Marker
                       position={[
@@ -721,7 +751,6 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
                     </Marker>
                   )}
 
-                  {/* Route polyline */}
                   {route && (
                     <Polyline
                       positions={route.coordinates}

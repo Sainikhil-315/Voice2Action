@@ -240,7 +240,8 @@ export const authoritiesAPI = {
   update: (id, data) => api.put(`/authorities/${id}`, data),
   delete: (id) => api.delete(`/authorities/${id}`),
   getIssues: (id, params) => api.get(`/authorities/${id}/issues`, { params }),
-  updateIssueStatus: (id, issueId, data) => api.put(`/authorities/${id}/issues/${issueId}`, data),
+  updateIssueStatus: (id, issueId, data, token) => 
+    api.put(`/authorities/${id}/issues/${issueId}`, data, { headers: { Authorization: `Bearer ${token}` }}),
   getMetrics: (id, params) => api.get(`/authorities/${id}/metrics`, { params }),
   getByDepartment: (department) => api.get(`/authorities/department/${department}`),
   findByLocation: (data) => api.post('/authorities/find-by-location', data),

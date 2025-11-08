@@ -595,7 +595,6 @@ router.get('/:id/issues', protectAuthority, async (req, res) => {
 // @access  Private (Authority only)
 router.put('/:id/issues/:issueId', protectAuthority, async (req, res) => {
   try {
-    console.log("In id issues issueId - status update🫂");
     const { status, notes } = req.body;
     // Check if requesting authority matches the ID
     if (req.authority._id.toString() !== req.params.id) {

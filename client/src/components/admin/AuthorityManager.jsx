@@ -215,7 +215,7 @@ const AuthorityManager = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center">
                         <Users className="w-4 h-4 mr-1" />
-                        {authority.issueCount || 0} issues
+                        {authority.performanceMetrics.totalAssignedIssues || 0} issues
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
