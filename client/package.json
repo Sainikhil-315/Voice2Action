@@ -17,7 +17,7 @@
     "framer-motion": "^10.9.1",
     "i18n": "^0.15.1",
     "i18next": "^22.4.13",
-    "leaflet": "^1.9.3",
+    "leaflet": "^1.9.4",
     "localforage": "^1.10.0",
     "lucide-react": "^0.544.0",
     "react": "^18.2.0",

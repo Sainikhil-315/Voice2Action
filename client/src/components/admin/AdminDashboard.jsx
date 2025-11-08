@@ -230,7 +230,7 @@ const AdminDashboard = () => {
                 <Download className="w-4 h-4 mr-2" />
                 Export Data
               </button>
-              <Link href="/admin/verification" className="btn btn-primary flex items-center">
+              <Link to="/admin/verification" className="btn btn-primary flex items-center">
                 <Eye className="w-4 h-4 mr-2" />
                 Review Issues
               </Link>
@@ -437,7 +437,7 @@ const AdminDashboard = () => {
               </div>
 
               <div className="p-6 space-y-3">
-                <Link href="/admin/verification" className="w-full btn btn-primary
+                <Link to="/admin/verification" className="w-full btn btn-primary
                 flex items-center justify-center"
                 >
                   <Eye className="w-4 h-4 mr-2" />

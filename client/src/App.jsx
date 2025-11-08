@@ -91,7 +91,7 @@ function App() {
             <SiteTour />
 
             {/* Header */}
-            <Header />
+              {!window.location.pathname.startsWith('/authority') && <Header />}
 
             {/* Main Content */}
             <main id="main-content" className="flex-1 focus:outline-none">

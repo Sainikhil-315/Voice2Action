@@ -248,94 +248,225 @@ router.put('/issues/:id/status', async (req, res) => {
     const oldStatus = issue.status;
     const { status, adminNotes, rejectionReason, assignedTo, estimatedResolutionTime } = value;
 
-    // Update issue fields
-    issue.status = status;
+    // Update basic issue fields
     issue.adminNotes = adminNotes || '';
 
+    // Handle rejection
     if (status === 'rejected') {
+      issue.status = 'rejected';
       issue.rejectionReason = rejectionReason;
+      
+      // Add rejection timeline entry
+      issue.timeline.push({
+        action: 'rejected',
+        timestamp: new Date(),
+        user: req.user._id,
+        notes: rejectionReason || ''
+      });
     }
 
-    if (status === 'assigned' && assignedTo) {
+    // Handle verification with AUTO-ASSIGNMENT
+    else if (status === 'verified') {
+      try {
+        // Find an active authority that handles this issue category
+        const suitableAuthority = await Authority.findOne({
+          department: issue.category,
+          status: 'active'
+        }).sort({ 
+          'performanceMetrics.rating': -1, // Highest rated first
+          'performanceMetrics.averageResolutionTime': 1 // Then fastest
+        });
+
+        if (suitableAuthority) {
+          // Auto-assign to authority
+          issue.assignedTo = suitableAuthority._id;
+          issue.status = 'assigned'; // Skip 'verified', go directly to 'assigned'
+          
+          // Update authority metrics
+          await Authority.findByIdAndUpdate(suitableAuthority._id, {
+            $inc: { 'performanceMetrics.totalAssignedIssues': 1 },
+            lastUpdated: new Date()
+          });
+
+          // Add verification timeline entry
+          issue.timeline.push({
+            action: 'verified',
+            timestamp: new Date(),
+            user: req.user._id,
+            notes: adminNotes || 'Issue verified by admin'
+          });
+
+          // Add assignment timeline entry
+          issue.timeline.push({
+            action: 'assigned',
+            timestamp: new Date(),
+            user: req.user._id,
+            authority: suitableAuthority._id,
+            notes: `Auto-assigned to ${suitableAuthority.name} (${suitableAuthority.department})`
+          });
+
+          // Send notification to authority
+          const notificationService = req.app.get('notificationService');
+          if (notificationService) {
+            setImmediate(async () => {
+              try {
+                await notificationService.notifyNewIssue(issue, [suitableAuthority]);
+              } catch (notifError) {
+                console.error('Authority notification error:', notifError);
+              }
+            });
+          }
+
+          console.log(`✅ Issue ${issue._id} auto-assigned to ${suitableAuthority.name}`);
+        } else {
+          // No authority found - keep as verified
+          issue.status = 'verified';
+          
+          issue.timeline.push({
+            action: 'verified',
+            timestamp: new Date(),
+            user: req.user._id,
+            notes: `${adminNotes || 'Issue verified'} - No authority available for ${issue.category}`
+          });
+
+          console.warn(`⚠️ No authority found for category: ${issue.category}`);
+        }
+      } catch (assignError) {
+        console.error('Auto-assignment error:', assignError);
+        // Fallback: Keep as verified if auto-assignment fails
+        issue.status = 'verified';
+        
+        issue.timeline.push({
+          action: 'verified',
+          timestamp: new Date(),
+          user: req.user._id,
+          notes: adminNotes || 'Issue verified by admin'
+        });
+      }
+    }
+
+    // Handle manual assignment (admin explicitly assigns to specific authority)
+    else if (status === 'assigned' && assignedTo) {
+      issue.status = 'assigned';
       issue.assignedTo = assignedTo;
+      
+      // Update authority metrics
+      await Authority.findByIdAndUpdate(assignedTo, {
+        $inc: { 'performanceMetrics.totalAssignedIssues': 1 },
+        lastUpdated: new Date()
+      });
+
+      // Get authority details for timeline
+      const authority = await Authority.findById(assignedTo);
+      
+      issue.timeline.push({
+        action: 'assigned',
+        timestamp: new Date(),
+        user: req.user._id,
+        authority: assignedTo,
+        notes: adminNotes || `Manually assigned to ${authority?.name || 'authority'}`
+      });
+
+      // Send notification to manually assigned authority
+      if (authority) {
+        const notificationService = req.app.get('notificationService');
+        if (notificationService) {
+          setImmediate(async () => {
+            try {
+              await notificationService.notifyNewIssue(issue, [authority]);
+            } catch (notifError) {
+              console.error('Authority notification error:', notifError);
+            }
+          });
+        }
+      }
     }
 
+    // Handle other status changes (in_progress, resolved, closed)
+    else {
+      issue.status = status;
+      
+      issue.timeline.push({
+        action: status,
+        timestamp: new Date(),
+        user: req.user._id,
+        notes: adminNotes || ''
+      });
+    }
+
+    // Set estimated resolution time if provided
     if (estimatedResolutionTime) {
       issue.estimatedResolutionTime = estimatedResolutionTime;
     }
 
-    // Add timeline entry
-    issue.timeline.push({
-      action: status,
-      timestamp: new Date(),
-      user: req.user._id,
-      notes: adminNotes || rejectionReason || ''
-    });
-
+    // Save the updated issue
     await issue.save();
 
     // Update user stats if issue is resolved
     if (status === 'resolved' && oldStatus !== 'resolved') {
-      const resolvedTimes = await Issue.find({
-        status: 'resolved',
-        actualResolutionTime: { $exists: true }
-      }).select('actualResolutionTime -_id');
-
-      const times = resolvedTimes.map(doc => doc.actualResolutionTime).filter(x => typeof x === 'number');
-
-      let averageResolutionTime = 0;
-      let medianResolutionTime = 0;
-
-      if (times.length > 0) {
-        averageResolutionTime = times.reduce((a, b) => a + b, 0) / times.length;
-        const sorted = [...times].sort((a, b) => a - b);
-        const mid = Math.floor(sorted.length / 2);
-        medianResolutionTime = sorted.length % 2 === 0
-          ? (sorted[mid - 1] + sorted[mid]) / 2
-          : sorted[mid];
-      }
-
       await User.findByIdAndUpdate(issue.reporter._id, {
-        $set: {
-          averageResolutionTime,
-          medianResolutionTime
+        $inc: { 'stats.issuesResolved': 1 }
+      });
+
+      // Recalculate authority's average resolution time
+      if (issue.assignedTo) {
+        const resolvedIssues = await Issue.find({
+          assignedTo: issue.assignedTo,
+          status: 'resolved',
+          actualResolutionTime: { $exists: true }
+        }).select('actualResolutionTime');
+
+        if (resolvedIssues.length > 0) {
+          const avgTime = resolvedIssues.reduce((sum, iss) => sum + iss.actualResolutionTime, 0) / resolvedIssues.length;
+          await Authority.findByIdAndUpdate(issue.assignedTo, {
+            $inc: { 'performanceMetrics.resolvedIssues': 1 },
+            'performanceMetrics.averageResolutionTime': Math.round(avgTime),
+            lastUpdated: new Date()
+          });
+        }
+      }
+    }
+
+    // Send status update notification to reporter
+    const notificationService = req.app.get('notificationService');
+    if (notificationService && issue.reporter) {
+      setImmediate(async () => {
+        try {
+          await notificationService.notifyIssueStatusChange(
+            issue,
+            oldStatus,
+            issue.status,
+            req.user,
+            adminNotes || rejectionReason
+          );
+        } catch (notifError) {
+          console.error('Reporter notification error:', notifError);
         }
       });
     }
 
-    // Send notifications
-    const notificationService = req.app.get('notificationService');
-    if (notificationService) {
-      await notificationService.notifyIssueStatusChange(
-        issue,
-        oldStatus,
-        status,
-        req.user,
-        adminNotes || rejectionReason
-      );
+    // Prepare response
+    const response = {
+      id: issue._id,
+      status: issue.status,
+      oldStatus: oldStatus,
+      adminNotes: issue.adminNotes,
+      rejectionReason: issue.rejectionReason,
+      assignedTo: issue.assignedTo,
+      timeline: issue.timeline,
+      estimatedResolutionTime: issue.estimatedResolutionTime
+    };
 
-      // If assigning to authority, notify them
-      if (status === 'assigned' && assignedTo) {
-        const authority = await User.findById(assignedTo);
-        if (authority) {
-          await notificationService.notifyNewIssue(issue, [authority]);
-        }
-      }
+    // Add authority details if assigned
+    if (issue.assignedTo) {
+      const assignedAuthority = await Authority.findById(issue.assignedTo).select('name department contact.email');
+      response.authority = assignedAuthority;
     }
 
     res.json({
       success: true,
-      message: `Issue ${status} successfully`,
-      data: {
-        issue: {
-          id: issue._id,
-          status: issue.status,
-          adminNotes: issue.adminNotes,
-          rejectionReason: issue.rejectionReason,
-          assignedTo: issue.assignedTo,
-          timeline: issue.timeline
-        }
-      }
+      message: `Issue ${issue.status} successfully${issue.assignedTo && oldStatus !== 'assigned' ? ' and assigned to authority' : ''}`,
+      data: { issue: response }
     });
 
   } catch (error) {
@@ -346,7 +477,7 @@ router.put('/issues/:id/status', async (req, res) => {
       error: error.message
     });
   }
-})
+});
 
 // @desc    Bulk operations on issues
 // @route   POST /api/admin/issues/bulk

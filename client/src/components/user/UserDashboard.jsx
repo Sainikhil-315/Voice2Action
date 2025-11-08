@@ -167,7 +167,7 @@ const UserDashboard = () => {
               </div>
               
               
-               <Link href="/report"
+               <Link to="/report"
                 className="btn btn-primary flex items-center"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -223,7 +223,7 @@ const UserDashboard = () => {
                     <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No issues yet</h3>
                     <p className="text-gray-600 mb-4">Start by reporting your first civic issue</p>
-                    <Link href="/report" className="btn btn-primary">
+                    <Link to="/report" className="btn btn-primary">
                       Report Issue
                     </Link>
                   </div>

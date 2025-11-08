@@ -2,7 +2,7 @@
 const express = require('express');
 const Authority = require('../models/Authority');
 const Issue = require('../models/Issue');
-const { protect, optionalAuth } = require('../middleware/auth');
+const { protect, optionalAuth, protectAuthority } = require('../middleware/auth');
 const { adminOnly } = require('../middleware/roleCheck');
 const { validateAuthorityCreation } = require('../utils/validators');
 const { sendEmail } = require('../services/emailService'); // Import email service
@@ -517,10 +517,13 @@ router.delete('/:id', protect, adminOnly, async (req, res) => {
 // @desc    Get issues assigned to authority
 // @route   GET /api/authorities/:id/issues
 // @access  Private (Authority/Admin)
-router.get('/:id/issues', optionalAuth, async (req, res) => {
+router.get('/:id/issues', protectAuthority, async (req, res) => {
   try {
-    // Check if requesting authority matches the ID or if it's an admin
-    if (req.authority._id.toString() !== req.params.id && req.user?.role !== 'admin') {
+    console.log('Authority ID from token:', req.authority._id.toString());
+    console.log('Requested ID:', req.params.id);
+    
+    // Check if requesting authority matches the ID
+    if (req.authority._id.toString() !== req.params.id) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. You can only view your own assigned issues.'
@@ -545,7 +548,7 @@ router.get('/:id/issues', optionalAuth, async (req, res) => {
     if (priority) filter.priority = priority;
 
     const issues = await Issue.find(filter)
-      .populate('reporter', 'name email phone avatar')
+      .populate('reporter', 'name email phone avatar stats')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
@@ -587,13 +590,13 @@ router.get('/:id/issues', optionalAuth, async (req, res) => {
   }
 });
 
-// @desc    Update issue status by authority (MISSING FUNCTION - ADDED)
+// @desc    Update issue status by authority
 // @route   PUT /api/authorities/:id/issues/:issueId
 // @access  Private (Authority only)
-router.put('/:id/issues/:issueId', optionalAuth, async (req, res) => {
+router.put('/:id/issues/:issueId', protectAuthority, async (req, res) => {
   try {
+    console.log("In id issues issueId - status update🫂");
     const { status, notes } = req.body;
-
     // Check if requesting authority matches the ID
     if (req.authority._id.toString() !== req.params.id) {
       return res.status(403).json({
@@ -630,6 +633,16 @@ router.put('/:id/issues/:issueId', optionalAuth, async (req, res) => {
     }
 
     const oldStatus = issue.status;
+    
+    // Prevent invalid status transitions
+    if (oldStatus === 'resolved') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot modify an already resolved issue'
+      });
+    }
+
+    // Update issue status
     issue.status = status;
     
     if (notes) {
@@ -641,19 +654,26 @@ router.put('/:id/issues/:issueId', optionalAuth, async (req, res) => {
       action: status,
       timestamp: new Date(),
       authority: authority._id,
-      notes: notes || ''
+      notes: notes || (status === 'in_progress' ? 'Authority started working on the issue' : 'Issue resolved by authority')
     });
 
-    // Set resolution time if issue is being resolved
-    if (status === 'resolved' && oldStatus !== 'resolved') {
-      issue.resolvedAt = new Date();
-      issue.actualResolutionTime = Math.floor((issue.resolvedAt - issue.createdAt) / (1000 * 60 * 60)); // in hours
+    // Handle IN_PROGRESS status
+    if (status === 'in_progress' && oldStatus !== 'in_progress') {
+      // Record when work started
+      issue.workStartedAt = new Date();
+      
+      console.log(`✅ Authority ${authority.name} started working on issue: ${issue.title}`);
     }
 
-    await issue.save();
+    // Handle RESOLVED status
+    if (status === 'resolved' && oldStatus !== 'resolved') {
+      issue.resolvedAt = new Date();
+      
+      // Calculate resolution time from creation or from when work started
+      const startTime = issue.workStartedAt || issue.createdAt;
+      issue.actualResolutionTime = Math.floor((issue.resolvedAt - startTime) / (1000 * 60 * 60)); // in hours
 
-    // Update authority performance metrics
-    if (status === 'resolved') {
+      // Update authority performance metrics
       await Authority.findByIdAndUpdate(req.params.id, {
         $inc: { 'performanceMetrics.resolvedIssues': 1 },
         lastUpdated: new Date()
@@ -667,30 +687,46 @@ router.put('/:id/issues/:issueId', optionalAuth, async (req, res) => {
       });
 
       if (resolvedIssues.length > 0) {
-        const avgTime = resolvedIssues.reduce((sum, issue) => sum + issue.actualResolutionTime, 0) / resolvedIssues.length;
+        const avgTime = resolvedIssues.reduce((sum, iss) => sum + iss.actualResolutionTime, 0) / resolvedIssues.length;
         await Authority.findByIdAndUpdate(req.params.id, {
           'performanceMetrics.averageResolutionTime': Math.round(avgTime)
         });
       }
+
+      console.log(`✅ Issue resolved by ${authority.name}: ${issue.title} (Resolution time: ${issue.actualResolutionTime}h)`);
     }
 
-    // Send notifications (if email service is available)
-    try {
-      if (issue.reporter && issue.reporter.email) {
-        await sendIssueStatusEmail(issue.reporter, issue, status, notes);
+    await issue.save();
+
+    // Send notifications to reporter
+    const notificationService = req.app.get('notificationService');
+    if (notificationService && issue.reporter) {
+      try {
+        await notificationService.notifyIssueStatusChange(
+          issue,
+          oldStatus,
+          status,
+          { name: authority.name, role: 'authority' },
+          notes || (status === 'in_progress' ? 'Work has started on your issue' : 'Your issue has been resolved')
+        );
+      } catch (emailError) {
+        console.warn('Failed to send notification:', emailError.message);
       }
-    } catch (emailError) {
-      console.warn('Failed to send notification email:', emailError.message);
     }
 
     res.json({
       success: true,
-      message: `Issue marked as ${status}`,
+      message: status === 'in_progress' 
+        ? 'Work started on issue successfully' 
+        : 'Issue marked as resolved successfully',
       data: {
         issue: {
           id: issue._id,
+          title: issue.title,
           status: issue.status,
+          oldStatus: oldStatus,
           timeline: issue.timeline,
+          workStartedAt: issue.workStartedAt,
           resolvedAt: issue.resolvedAt,
           actualResolutionTime: issue.actualResolutionTime
         }
@@ -707,10 +743,10 @@ router.put('/:id/issues/:issueId', optionalAuth, async (req, res) => {
   }
 });
 
-// @desc    Get authority dashboard data (MISSING FUNCTION - ADDED)
+// @desc    Get authority dashboard data
 // @route   GET /api/authorities/:id/dashboard
 // @access  Private (Authority only)
-router.get('/:id/dashboard', optionalAuth, async (req, res) => {
+router.get('/:id/dashboard', protectAuthority, async (req, res) => {
   try {
     // Check if requesting authority matches the ID
     if (req.authority._id.toString() !== req.params.id) {
@@ -1204,7 +1240,7 @@ router.post('/login/refresh-otp', async (req, res) => {
 // @desc    Logout authority (MISSING FUNCTION - ADDED)
 // @route   POST /api/authorities/logout
 // @access  Private (Authority only)
-router.post('/logout', optionalAuth, async (req, res) => {
+router.post('/logout', protectAuthority, async (req, res) => {
   try {
     // In a real implementation, you might want to blacklist the token
     // or store logout time in the database
@@ -1226,7 +1262,7 @@ router.post('/logout', optionalAuth, async (req, res) => {
 // @desc    Update authority profile (MISSING FUNCTION - ADDED)
 // @route   PUT /api/authorities/:id/profile
 // @access  Private (Authority only)
-router.put('/:id/profile', optionalAuth, async (req, res) => {
+router.put('/:id/profile', protectAuthority, async (req, res) => {
   try {
     // Check if requesting authority matches the ID
     if (req.authority._id.toString() !== req.params.id) {
