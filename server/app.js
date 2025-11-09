@@ -36,25 +36,25 @@ app.use(helmet({
   }
 }));
 
-// CORS configuration
+// ✅ UPDATED CORS configuration for production
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
-      process.env.CLIENT_URL,
+      process.env.CLIENT_URL, // Your Vercel frontend URL
       'http://localhost:3000',
       'http://localhost:3001',
       'http://127.0.0.1:3000',
-      'http://192.168.0.187:8081', // Add your local network IP for mobile testing
-      'http://192.168.0.187:3000', // Add your local network IP for mobile testing
-      'exp://kdn9mau-anonymous-8081.exp.direct',
+      // Add your production frontend URL here after Vercel deployment
+      // Example: 'https://voice2action.vercel.app'
     ];
     
-    // Allow requests with no origin (mobile apps, etc.)
+    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.log('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -65,35 +65,37 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// // Rate limiting
-// const limiter = rateLimit({
-//   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-//   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
-//   message: {
-//     success: false,
-//     message: 'Too many requests from this IP, please try again later.'
-//   },
-//   standardHeaders: true,
-//   legacyHeaders: false,
-//   // Skip rate limiting for certain routes if needed
-//   skip: (req) => {
-//     // Skip rate limiting for socket.io connections
-//     return req.path.startsWith('/socket.io');
-//   }
-// });
+// Rate limiting - You can uncomment this in production
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for socket.io connections
+    return req.path.startsWith('/socket.io');
+  }
+});
 
-// app.use(limiter);
+// Apply rate limiting only in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(limiter);
+}
 
-// Stricter rate limiting for auth routes
-// const authLimiter = rateLimit({
-//   windowMs: 15 * 60 * 1000, // 15 minutes
-//   max: 5, // limit each IP to 5 requests per windowMs for auth routes
-//   message: {
-//     success: false,
-//     message: 'Too many authentication attempts, please try again later.'
-//   },
-//   skipSuccessfulRequests: true
-// });
+// Stricter rate limiting for auth routes (optional)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10, // Increased from 5 to 10 for better UX
+  message: {
+    success: false,
+    message: 'Too many authentication attempts, please try again later.'
+  },
+  skipSuccessfulRequests: true
+});
 
 // Body parsing middleware
 app.use(express.json({ 
@@ -144,15 +146,6 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/authorities', authorityRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/feedback', feedbackRoutes);
-
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static('client/build'));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'));
-  });
-}
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -235,14 +228,13 @@ app.use((error, req, res, next) => {
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
   console.error('Unhandled Promise Rejection:', err);
-  // Close server & exit process
-  process.exit(1);
+  // In production, you might want to log this to a service like Sentry
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
-  process.exit(1);
+  // In production, log and potentially restart the service
 });
 
 module.exports = app;

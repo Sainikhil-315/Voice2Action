@@ -15,34 +15,40 @@ connectDB();
 // Create HTTP server
 const server = http.createServer(app);
 
+// ✅ UPDATED: Production-ready Socket.IO configuration
 const allowedOrigins = [
+  process.env.CLIENT_URL, // Your Vercel frontend URL
   'http://localhost:3000',
   'http://localhost:3001',
   'http://127.0.0.1:3000',
-  'http://192.168.0.187:3000',
-  'http://192.168.0.187:8081',
-  'exp://kdn9mau-anonymous-8081.exp.direct'
+  // Add your production frontend URL after Vercel deployment
+  // Example: 'https://voice2action.vercel.app'
 ];
 
 const io = socketIo(server, {
   cors: {
     origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, etc.)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.log('Socket.IO CORS blocked:', origin);
         callback(new Error('Not allowed by CORS'));
       }
     },
     methods: ['GET', 'POST'],
     credentials: true
   },
-  transports: ['polling', 'websocket'],
+  transports: ['polling', 'websocket'], // Polling first for better compatibility
   pingTimeout: 60000,
-  pingInterval: 25000
+  pingInterval: 25000,
+  allowEIO3: true, // Allow Engine.IO v3 clients
+  // ✅ Important for Render free tier (prevents timeout)
+  connectTimeout: 45000,
+  upgradeTimeout: 30000
 });
 
 setupSocket(io);
-
 
 // Initialize notification service with socket.io
 const notificationService = new NotificationService(io);
@@ -51,7 +57,9 @@ const notificationService = new NotificationService(io);
 app.set('notificationService', notificationService);
 app.set('io', io);
 
-// Scheduled tasks
+// ✅ Scheduled tasks (Render supports cron jobs natively)
+// Note: On Render free tier, these will only run when the service is active
+
 // Send weekly reports every Sunday at 9 AM
 cron.schedule('0 9 * * 0', async () => {
   console.log('Running weekly report task...');
@@ -85,7 +93,7 @@ cron.schedule('0 9 * * 0', async () => {
         issuesReported: userIssues.length,
         issuesResolved: resolvedIssues.length,
         points: (userIssues.length * 2) + (resolvedIssues.length * 5),
-        rank: user.stats.contributionScore // This would be calculated properly
+        rank: user.stats.contributionScore
       };
       
       // Send weekly summary SMS
@@ -161,12 +169,6 @@ cron.schedule('0 2 * * 1', async () => {
     });
     
     console.log(`Cleaned up ${result.deletedCount} old rejected issues`);
-    
-    // Additional cleanup tasks can be added here
-    // - Clean up temporary files
-    // - Archive old completed issues
-    // - Update authority performance metrics
-    
   } catch (error) {
     console.error('Cleanup task error:', error);
   }
@@ -200,21 +202,10 @@ cron.schedule('0 10 1 * *', async () => {
   }
 });
 
-// Backup database daily at 3 AM (placeholder for actual backup logic)
-cron.schedule('0 3 * * *', async () => {
-  console.log('Running database backup...');
-  // In production, you would implement actual database backup logic here
-  // This could involve:
-  // - Creating MongoDB dumps
-  // - Uploading to cloud storage
-  // - Rotating old backups
-  console.log('Database backup completed (placeholder)');
-});
-
 // Server startup
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`
 🚀 Voice2Action Server Started Successfully!
 
@@ -230,19 +221,30 @@ server.listen(PORT, () => {
   `);
 });
 
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
+// ✅ Graceful shutdown (Important for Render)
+const gracefulShutdown = () => {
+  console.log('Shutting down gracefully...');
+  
+  // Close server
   server.close(() => {
-    console.log('Process terminated');
+    console.log('HTTP server closed');
+    
+    // Close database connection
+    const mongoose = require('mongoose');
+    mongoose.connection.close(false, () => {
+      console.log('MongoDB connection closed');
+      process.exit(0);
+    });
   });
-});
+  
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
 
-process.on('SIGINT', () => {
-  console.log('SIGINT received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('Process terminated');
-  });
-});
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 module.exports = server;

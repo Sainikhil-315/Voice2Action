@@ -2,9 +2,19 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+// ✅ Single source of truth for API URL
+const getBaseURL = () => {
+  // In production, use environment variable
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.REACT_APP_API_URL || 'https://your-app-name.onrender.com/api';
+  }
+  // In development, use localhost
+  return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+};
+
 // Create axios instance
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api' || 'http://192.168.0.187:5000/api' || 'exp://192.168.0.187:8081/api' || process.env.REACT_APP_API_URL,
+  baseURL: getBaseURL(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
@@ -231,7 +241,6 @@ export const adminAPI = {
   sendAnnouncement: (data) => api.post('/admin/announcement', data),
   getSystemHealth: () => api.get('/admin/system/health')
 };
-
 
 export const authoritiesAPI = {
   getAll: (params) => api.get('/authorities', { params }),
