@@ -26,6 +26,16 @@ export const SocketProvider = ({ children }) => {
   const userName = useMemo(() => user?.name, [user?.name]);
   const userRole = useMemo(() => user?.role, [user?.role]);
 
+  // ✅ FIX: Get the correct backend URL
+  const getSocketURL = () => {
+    // In production, use the environment variable for backend API
+    if (import.meta.env.PROD) {
+      return import.meta.env.VITE_API_URL || 'https://voice2action-api.onrender.com';
+    }
+    // In development, use localhost
+    return 'http://localhost:5000';
+  };
+
   // Initialize socket connection safely
   useEffect(() => {
     if (!isAuthenticated || !token) {
@@ -41,16 +51,20 @@ export const SocketProvider = ({ children }) => {
 
     // Create socket only if none exists
     if (!socketRef.current) {
-      const newSocket = io(
-        // 'http://192.168.0.187:5000' || import.meta.env.VITE_API_URL || 
-        "https://voice2action-steel.vercel.app/" || "http://localhost:5000",
-        {
-          auth: { token },
-          transports: ["polling", "websocket"],
-          timeout: 20000,
-          // forceNew: true,
-        }
-      );
+      const socketURL = getSocketURL();
+      console.log('🔌 Connecting to Socket.IO server:', socketURL);
+      
+      const newSocket = io(socketURL, {
+        auth: { token },
+        transports: ["websocket", "polling"], // Try WebSocket first, then polling
+        timeout: 20000,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: maxReconnectAttempts,
+        // Important: Don't include trailing slash in path
+        path: '/socket.io',
+      });
+      
       newSocket.connect();
       socketRef.current = newSocket;
 
