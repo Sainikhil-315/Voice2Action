@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 const getBaseURL = () => {
   // In production, use environment variable
   if (process.env.NODE_ENV === 'production') {
-    return process.env.REACT_APP_API_URL || 'https://your-app-name.onrender.com/api';
+    return process.env.REACT_APP_API_URL || 'https://voice2action-api.onrender.com/api';
   }
   // In development, use localhost
   return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
