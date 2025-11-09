@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
+import { Analytics } from '@vercel/analytics/react';
 
 // Import i18n for internationalization
 // import './i18n';
@@ -284,6 +285,7 @@ root.render(
   <React.StrictMode>
     <ErrorBoundary>
       <App />
+      <Analytics />
     </ErrorBoundary>
   </React.StrictMode>
 );
