@@ -43,7 +43,7 @@ export const SocketProvider = ({ children }) => {
     if (!socketRef.current) {
       const newSocket = io(
         // 'http://192.168.0.187:5000' || import.meta.env.VITE_API_URL || 
-        "http://localhost:5000" || "https://voice2action-steel.vercel.app/",
+        "https://voice2action-steel.vercel.app/" || "http://localhost:5000",
         {
           auth: { token },
           transports: ["polling", "websocket"],
