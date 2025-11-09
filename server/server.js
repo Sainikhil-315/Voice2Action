@@ -21,6 +21,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
   'http://127.0.0.1:3000',
+  'https://voice2action-steel.vercel.app'
   // Add your production frontend URL after Vercel deployment
   // Example: 'https://voice2action.vercel.app'
 ];
