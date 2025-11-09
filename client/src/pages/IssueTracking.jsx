@@ -222,7 +222,7 @@ const IssueTracking = () => {
                 <MapPin className="w-4 h-4 mr-2" />
                 Map View
               </button>
-              <Link href="/report" className="btn btn-primary flex items-center">
+              <Link to="/report" className="btn btn-primary flex items-center">
                 Report New Issue
               </Link>
             </div>
@@ -311,12 +311,13 @@ const IssueTracking = () => {
               No issues found
             </h3>
             <p className="text-gray-600 mb-6">
-              {Object.values(filters).some((f) => f)
+              {console.log(filters)}
+              {!Object.values(filters).some((f) => f)
                 ? "Try adjusting your search filters"
                 : "Be the first to report an issue in your community"}
             </p>
             {!Object.values(filters).some((f) => f) && (
-              <Link href="/report" className="btn btn-primary">
+              <Link to="/report" className="btn btn-primary">
                 Report First Issue
               </Link>
             )}

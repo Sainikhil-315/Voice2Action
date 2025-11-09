@@ -323,7 +323,6 @@ const Home = () => {
   const getFeedbacks = async () => {
     try {
       const response = await feedbackAPI.getAll();
-      console.log("Fetched feedbacks:", response.data.data.feedbacks);
       setFeedbacks(response.data.data.feedbacks);
     } catch (error) {
       const errorMessage =
@@ -383,27 +382,6 @@ const Home = () => {
     },
   ];
 
-  // const testimonials = [
-  //   {
-  //     name: 'Priya Sharma',
-  //     role: 'Community Leader',
-  //     content: 'Voice2Action has transformed how we handle civic issues in our locality. The response time has improved dramatically!',
-  //     avatar: null
-  //   },
-  //   {
-  //     name: 'Rajesh Kumar',
-  //     role: 'Local Resident',
-  //     content: 'I love how easy it is to report problems and track their progress. The voice recording feature is incredibly convenient.',
-  //     avatar: null
-  //   },
-  //   {
-  //     name: 'Municipal Officer',
-  //     role: 'Government Official',
-  //     content: 'This platform has streamlined our issue management process and improved citizen satisfaction significantly.',
-  //     avatar: null
-  //   }
-  // ]
-
   const howItWorks = [
     {
       step: 1,
@@ -430,7 +408,6 @@ const Home = () => {
         "Get real-time updates on the status until the issue is completely resolved",
     },
   ];
-
   return (
     <div className="min-h-screen bg-white">
       {/* Floating Feedback Button */}

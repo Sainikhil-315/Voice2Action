@@ -22,7 +22,7 @@ const Login = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const from = location.state?.from?.pathname || "/dashboard";
+      const from = location.state?.from?.pathname || "/";
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
@@ -44,9 +44,8 @@ const Login = () => {
   const onSubmit = async (data) => {
     const result = await login(data);
     if (result.success) {
-      const from = location.state?.from?.pathname || "/dashboard";
+      const from = location.state?.from?.pathname || "/";
       navigate(from, { replace: true });
-      // window.location.reload(); // Reload to reset state
     }
   };
 
@@ -339,24 +338,6 @@ const Login = () => {
             </Link>
           </div>
         </motion.form>
-
-        {/* Demo Credentials (Development Only) */}
-        {/* {process.env.NODE_ENV === 'development' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
-          >
-            <h3 className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-2">Demo Credentials</h3>
-            <div className="space-y-1 text-xs text-blue-700 dark:text-blue-400">
-              <p><strong>Admin:</strong> admin@voice2action.com / admin123</p>
-              <p><strong>User:</strong> user@voice2action.com / user123</p>
-            </div>
-          </motion.div>
-        )} */}
-
-        {/* Footer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

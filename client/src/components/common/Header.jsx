@@ -67,7 +67,7 @@ const Header = () => {
       navigate("/login");
       return;
     }
-    navigate("/dashboard?tab=report");
+    navigate("/report");
   };
 
   const isActivePage = (path) => {

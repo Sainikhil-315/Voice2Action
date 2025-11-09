@@ -25,7 +25,7 @@ const Register = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -47,7 +47,7 @@ const Register = () => {
     const { confirmPassword, ...userData } = data;
     const result = await registerUser(userData);
     if (result.success) {
-      navigate('/dashboard', { replace: true });
+      navigate('/', { replace: true });
     }
   };
 
