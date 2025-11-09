@@ -200,7 +200,7 @@ export const SOCIAL_LINKS = {
 
 // Contact Information
 export const CONTACT_INFO = {
-  email: 'pushparamagani7@gmail.com',
+  email: 'sainikhilmullapudi1604@gmail.com',
   phone: '+91-1234567890',
   address: 'Bhimavaram, Andhra Pradesh, India',
   hours: 'Mon-Fri 9:00 AM - 6:00 PM IST'
