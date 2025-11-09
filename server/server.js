@@ -28,25 +28,33 @@ const allowedOrigins = [
 
 const io = socketIo(server, {
   cors: {
-    origin: function (origin, callback) {
-      // Allow requests with no origin (mobile apps, etc.)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.log('Socket.IO CORS blocked:', origin);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
+    // ⚠️ IMPORTANT: This needs to match EXACTLY with your Vercel URL
+    origin: [
+      process.env.CLIENT_URL, // Your Vercel URL from environment
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+    ],
     methods: ['GET', 'POST'],
-    credentials: true
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
   },
-  transports: ['polling', 'websocket'], // Polling first for better compatibility
+  // ✅ Important for production
+  transports: ['websocket', 'polling'], // WebSocket first, polling as fallback
+  allowEIO3: true,
   pingTimeout: 60000,
   pingInterval: 25000,
-  allowEIO3: true, // Allow Engine.IO v3 clients
-  // ✅ Important for Render free tier (prevents timeout)
   connectTimeout: 45000,
-  upgradeTimeout: 30000
+  upgradeTimeout: 30000,
+  // ✅ Add this for better logging
+  path: '/socket.io/',
+});
+// ✅ Add logging to debug CORS issues
+io.engine.on("connection_error", (err) => {
+  console.log('Socket.IO Connection Error:');
+  console.log('  Code:', err.code);
+  console.log('  Message:', err.message);
+  console.log('  Context:', err.context);
 });
 
 setupSocket(io);
