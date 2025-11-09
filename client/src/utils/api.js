@@ -9,7 +9,7 @@ const getBaseURL = () => {
     return process.env.REACT_APP_API_URL || 'https://voice2action-api.onrender.com/api';
   }
   // In development, use localhost
-  return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  return 'http://localhost:5000/api';
 };
 
 // Create axios instance

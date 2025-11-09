@@ -30,7 +30,7 @@ const io = socketIo(server, {
   cors: {
     // ⚠️ IMPORTANT: This needs to match EXACTLY with your Vercel URL
     origin: [
-      process.env.CLIENT_URL, // Your Vercel URL from environment
+      'https://voice2action-steel.vercel.app/', // Your Vercel URL from environment
       'http://localhost:3000',
       'http://localhost:3001',
       'http://127.0.0.1:3000',
