@@ -1,4 +1,3 @@
-// routes/admin.js
 const express = require('express');
 const Issue = require('../models/Issue');
 const User = require('../models/User');
@@ -11,7 +10,7 @@ const {
   validateBulkOperation,
   validateAuthorityCreation 
 } = require('../utils/validators');
-
+const locationService = require('../services/locationService');
 const router = express.Router();
 
 // Apply admin protection to all routes
@@ -256,7 +255,6 @@ router.put('/issues/:id/status', async (req, res) => {
       issue.status = 'rejected';
       issue.rejectionReason = rejectionReason;
       
-      // Add rejection timeline entry
       issue.timeline.push({
         action: 'rejected',
         timestamp: new Date(),
@@ -265,22 +263,67 @@ router.put('/issues/:id/status', async (req, res) => {
       });
     }
 
-    // Handle verification with AUTO-ASSIGNMENT
+    // ✅ MODIFIED: Handle verification with SMART GEOGRAPHIC AUTO-ASSIGNMENT
     else if (status === 'verified') {
       try {
-        // Find an active authority that handles this issue category
-        const suitableAuthority = await Authority.findOne({
-          department: issue.category,
-          status: 'active'
-        }).sort({ 
-          'performanceMetrics.rating': -1, // Highest rated first
-          'performanceMetrics.averageResolutionTime': 1 // Then fastest
-        });
+        const { lat, lng } = issue.location.coordinates;
+        
+        console.log(`🔍 Finding authority for issue at (${lat}, ${lng})...`);
+        
+        // Step 1: Get detailed location data from coordinates
+        const locationResult = await locationService.getLocationData(lat, lng);
+        
+        if (!locationResult.success) {
+          console.warn('⚠️ Could not resolve location, will try basic matching');
+        }
+        
+        const locationData = locationResult.success 
+          ? locationService.normalizeLocation(locationResult.location)
+          : {
+              state: issue.location.district || null, // Fallback to stored data
+              district: issue.location.district || null,
+              pincode: null,
+              city: null
+            };
+        
+        console.log('📍 Resolved location:', locationData);
+        
+        // Step 2: Find geographically appropriate authority
+        let suitableAuthority = null;
+        
+        // Try geographic matching first
+        if (locationData.state || locationData.district) {
+          suitableAuthority = await Authority.findByLocation(
+            issue.category, 
+            locationData
+          );
+        }
+        
+        // Fallback: Find ANY active authority for this category (old behavior)
+        if (!suitableAuthority) {
+          console.warn(`⚠️ No geographically matched authority for ${issue.category} in ${locationData.district}, ${locationData.state}`);
+          console.log('🔄 Falling back to any available authority...');
+          
+          suitableAuthority = await Authority.findOne({
+            department: issue.category,
+            status: 'active'
+          }).sort({ 
+            'performanceMetrics.rating': -1,
+            'performanceMetrics.averageResolutionTime': 1
+          });
+        }
 
         if (suitableAuthority) {
-          // Auto-assign to authority
+          // ✅ GEOGRAPHIC MATCH FOUND - Auto-assign
           issue.assignedTo = suitableAuthority._id;
           issue.status = 'assigned'; // Skip 'verified', go directly to 'assigned'
+          
+          // Store resolved location in issue for future reference
+          if (locationData) {
+            issue.location.ward = locationData.city || issue.location.ward;
+            issue.location.district = locationData.district || issue.location.district;
+            // Add state if not present in schema - you might want to update Issue model
+          }
           
           // Update authority metrics
           await Authority.findByIdAndUpdate(suitableAuthority._id, {
@@ -296,13 +339,17 @@ router.put('/issues/:id/status', async (req, res) => {
             notes: adminNotes || 'Issue verified by admin'
           });
 
-          // Add assignment timeline entry
+          // Add assignment timeline entry with location details
+          const assignmentNote = locationData.pincode
+            ? `Auto-assigned to ${suitableAuthority.name} - Jurisdiction: ${locationData.district}, ${locationData.state} (Pincode: ${locationData.pincode})`
+            : `Auto-assigned to ${suitableAuthority.name} - Jurisdiction: ${locationData.district || 'Unknown'}, ${locationData.state || 'Unknown'}`;
+
           issue.timeline.push({
             action: 'assigned',
             timestamp: new Date(),
             user: req.user._id,
             authority: suitableAuthority._id,
-            notes: `Auto-assigned to ${suitableAuthority.name} (${suitableAuthority.department})`
+            notes: assignmentNote
           });
 
           // Send notification to authority
@@ -317,22 +364,29 @@ router.put('/issues/:id/status', async (req, res) => {
             });
           }
 
-          console.log(`✅ Issue ${issue._id} auto-assigned to ${suitableAuthority.name}`);
+          console.log(`✅ Issue ${issue._id} auto-assigned to ${suitableAuthority.name} (${suitableAuthority.jurisdiction.state}/${suitableAuthority.jurisdiction.districts.join(', ')})`);
+          
         } else {
-          // No authority found - keep as verified
+          // ❌ NO AUTHORITY FOUND - Keep as verified for manual assignment
           issue.status = 'verified';
+          
+          const warningNote = locationData.state
+            ? `${adminNotes || 'Issue verified'} - ⚠️ No authority found for ${issue.category} in ${locationData.district}, ${locationData.state}. Manual assignment required.`
+            : `${adminNotes || 'Issue verified'} - ⚠️ No authority available for ${issue.category}. Manual assignment required.`;
           
           issue.timeline.push({
             action: 'verified',
             timestamp: new Date(),
             user: req.user._id,
-            notes: `${adminNotes || 'Issue verified'} - No authority available for ${issue.category}`
+            notes: warningNote
           });
 
-          console.warn(`⚠️ No authority found for category: ${issue.category}`);
+          console.error(`❌ No authority found for category: ${issue.category} in ${locationData.district}, ${locationData.state}`);
         }
+        
       } catch (assignError) {
         console.error('Auto-assignment error:', assignError);
+        
         // Fallback: Keep as verified if auto-assignment fails
         issue.status = 'verified';
         
@@ -340,13 +394,36 @@ router.put('/issues/:id/status', async (req, res) => {
           action: 'verified',
           timestamp: new Date(),
           user: req.user._id,
-          notes: adminNotes || 'Issue verified by admin'
+          notes: `${adminNotes || 'Issue verified by admin'} - Auto-assignment failed: ${assignError.message}`
         });
       }
     }
 
     // Handle manual assignment (admin explicitly assigns to specific authority)
     else if (status === 'assigned' && assignedTo) {
+      const authority = await Authority.findById(assignedTo);
+      
+      if (!authority) {
+        return res.status(404).json({
+          success: false,
+          message: 'Authority not found'
+        });
+      }
+      
+      // ✅ NEW: Verify jurisdiction match (warning only, not blocking)
+      const { lat, lng } = issue.location.coordinates;
+      const locationResult = await locationService.getLocationData(lat, lng);
+      
+      if (locationResult.success) {
+        const locationData = locationService.normalizeLocation(locationResult.location);
+        const coversLocation = authority.coversLocation(locationData);
+        
+        if (!coversLocation) {
+          console.warn(`⚠️ WARNING: Authority ${authority.name} may not cover location ${locationData.district}, ${locationData.state}`);
+          issue.adminNotes = `${adminNotes || ''} [Warning: Authority jurisdiction mismatch]`;
+        }
+      }
+      
       issue.status = 'assigned';
       issue.assignedTo = assignedTo;
       
@@ -355,34 +432,29 @@ router.put('/issues/:id/status', async (req, res) => {
         $inc: { 'performanceMetrics.totalAssignedIssues': 1 },
         lastUpdated: new Date()
       });
-
-      // Get authority details for timeline
-      const authority = await Authority.findById(assignedTo);
       
       issue.timeline.push({
         action: 'assigned',
         timestamp: new Date(),
         user: req.user._id,
         authority: assignedTo,
-        notes: adminNotes || `Manually assigned to ${authority?.name || 'authority'}`
+        notes: adminNotes || `Manually assigned to ${authority.name}`
       });
 
       // Send notification to manually assigned authority
-      if (authority) {
-        const notificationService = req.app.get('notificationService');
-        if (notificationService) {
-          setImmediate(async () => {
-            try {
-              await notificationService.notifyNewIssue(issue, [authority]);
-            } catch (notifError) {
-              console.error('Authority notification error:', notifError);
-            }
-          });
-        }
+      const notificationService = req.app.get('notificationService');
+      if (notificationService) {
+        setImmediate(async () => {
+          try {
+            await notificationService.notifyNewIssue(issue, [authority]);
+          } catch (notifError) {
+            console.error('Authority notification error:', notifError);
+          }
+        });
       }
     }
 
-    // Handle other status changes (in_progress, resolved, closed)
+    // Handle other status changes (in_progress, resolved, closed) - UNCHANGED
     else {
       issue.status = status;
       
@@ -402,7 +474,7 @@ router.put('/issues/:id/status', async (req, res) => {
     // Save the updated issue
     await issue.save();
 
-    // Update user stats if issue is resolved
+    // Update user stats if issue is resolved - UNCHANGED
     if (status === 'resolved' && oldStatus !== 'resolved') {
       await User.findByIdAndUpdate(issue.reporter._id, {
         $inc: { 'stats.issuesResolved': 1 }
@@ -427,7 +499,7 @@ router.put('/issues/:id/status', async (req, res) => {
       }
     }
 
-    // Send status update notification to reporter
+    // Send status update notification to reporter - UNCHANGED
     const notificationService = req.app.get('notificationService');
     if (notificationService && issue.reporter) {
       setImmediate(async () => {
@@ -459,7 +531,8 @@ router.put('/issues/:id/status', async (req, res) => {
 
     // Add authority details if assigned
     if (issue.assignedTo) {
-      const assignedAuthority = await Authority.findById(issue.assignedTo).select('name department contact.email');
+      const assignedAuthority = await Authority.findById(issue.assignedTo)
+        .select('name department contact.email jurisdiction');
       response.authority = assignedAuthority;
     }
 
