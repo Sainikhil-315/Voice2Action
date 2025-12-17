@@ -890,22 +890,23 @@ async function reverseGeocode(lat, lng) {
       throw new Error('No address found');
     }
 
-    // Extract jurisdiction with better municipality detection
+    // Extract jurisdiction with proper field mapping
     const address = data.address;
 
-    // Try multiple fields for municipality
+    // ✅ MUNICIPALITY: Try multiple fields for municipality/city
     const municipality =
-      address.city ||
-      address.town ||
-      address.municipality ||
-      address.village ||
+      address.city ||           // Urban areas
+      address.town ||           // Smaller towns
+      address.municipality ||   // Official municipality
+      address.village ||        // Rural areas
       null;
 
-    // Try multiple fields for district
+    // ✅ DISTRICT: PRIORITIZE state_district over county
+    // county often contains city name, not the administrative district
     const district =
-      address.county ||
-      address.district ||
-      address.state_district ||
+      address.state_district ||  // Correct administrative district (e.g., "West Godavari") ✅
+      address.district ||        // Fallback
+      address.county ||          // Last resort (often contains city name)
       null;
 
     const state = address.state || null;
@@ -914,7 +915,8 @@ async function reverseGeocode(lat, lng) {
       municipality,
       district,
       state,
-      raw: address
+      raw: address,
+      note: `county="${address.county}", state_district="${address.state_district}"`
     });
 
     return {
