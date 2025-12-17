@@ -1,80 +1,242 @@
-// src/components/admin/AuthorityManager.jsx
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Building,
-  Users,
-  Search,
-  Filter,
-  X
-} from 'lucide-react'
-import { authoritiesAPI } from '../../utils/api'
-import { formatRelativeTime } from '../../utils/helpers'
-import { ISSUE_CATEGORIES, DISTRICTS_BY_STATE, MUNICIPALITIES_BY_DISTRICT, INDIAN_STATES } from '../../utils/constants'
-import LoadingButton from '../common/LoadingButton'
-import { SkeletonLoader } from '../common/Loader'
-import toast from 'react-hot-toast'
+  Plus, Edit, Trash2, Mail, Phone, MapPin, Building, Users, Search, 
+  Filter, X, TrendingUp, Award, Clock, CheckCircle, AlertCircle,
+  ChevronDown, BarChart3, Layers, MapPinned, SlidersHorizontal
+} from 'lucide-react';
+import { authoritiesAPI } from '../../utils/api';
+import { formatRelativeTime } from '../../utils/helpers';
+import { ISSUE_CATEGORIES, DISTRICTS_BY_STATE, MUNICIPALITIES_BY_DISTRICT, INDIAN_STATES } from '../../utils/constants';
+import LoadingButton from '../common/LoadingButton';
+import { SkeletonLoader } from '../common/Loader';
+import toast from 'react-hot-toast';
 
 const AuthorityManager = () => {
-  const [authorities, setAuthorities] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
-  const [editingAuthority, setEditingAuthority] = useState(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterDepartment, setFilterDepartment] = useState('')
+  const [authorities, setAuthorities] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingAuthority, setEditingAuthority] = useState(null);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filters
+  const [filters, setFilters] = useState({
+    searchQuery: '',
+    department: '',
+    jurisdictionLevel: '', // 'state', 'district', 'municipality'
+    state: '',
+    district: '',
+    municipality: '',
+    status: '',
+    sortBy: 'name', // 'name', 'rating', 'resolved', 'assignedIssues', 'resolutionTime'
+    sortOrder: 'asc' // 'asc', 'desc'
+  });
+
+  // Stats
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    byLevel: { state: 0, district: 0, municipality: 0 }
+  });
 
   useEffect(() => {
-    loadAuthorities()
-  }, [searchQuery, filterDepartment])
+    loadAuthorities();
+  }, [filters]);
 
   const loadAuthorities = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const params = {}
-      if (searchQuery) params.search = searchQuery
-      if (filterDepartment) params.department = filterDepartment
+      const params = {};
+      if (filters.searchQuery) params.search = filters.searchQuery;
+      if (filters.department) params.department = filters.department;
+      if (filters.status) params.status = filters.status;
+      if (filters.state) params.state = filters.state;
+      if (filters.district) params.district = filters.district;
+      if (filters.municipality) params.municipality = filters.municipality;
+      if (filters.jurisdictionLevel) params.jurisdictionLevel = filters.jurisdictionLevel;
+      if (filters.sortBy) params.sortBy = filters.sortBy;
+      if (filters.sortOrder) params.sortOrder = filters.sortOrder;
       
-  const response = await authoritiesAPI.getAll(params)
-  setAuthorities(response.data.data.authorities)
+      const response = await authoritiesAPI.getAll(params);
+      let authoritiesData = response.data.data.authorities || [];
+      
+      // Client-side jurisdiction level filter
+      if (filters.jurisdictionLevel) {
+        authoritiesData = authoritiesData.filter(auth => {
+          const hasDistrict = auth.jurisdiction?.district;
+          const hasMunicipality = auth.jurisdiction?.municipality;
+          
+          if (filters.jurisdictionLevel === 'state') return !hasDistrict && !hasMunicipality;
+          if (filters.jurisdictionLevel === 'district') return hasDistrict && !hasMunicipality;
+          if (filters.jurisdictionLevel === 'municipality') return hasMunicipality;
+          return true;
+        });
+      }
+
+      // Client-side sorting by performance metrics
+      if (filters.sortBy && filters.sortBy !== 'name') {
+        authoritiesData.sort((a, b) => {
+          let aVal, bVal;
+          
+          switch (filters.sortBy) {
+            case 'rating':
+              aVal = a.performanceMetrics?.rating || 0;
+              bVal = b.performanceMetrics?.rating || 0;
+              break;
+            case 'resolved':
+              aVal = a.performanceMetrics?.resolvedIssues || 0;
+              bVal = b.performanceMetrics?.resolvedIssues || 0;
+              break;
+            case 'assignedIssues':
+              aVal = a.performanceMetrics?.totalAssignedIssues || 0;
+              bVal = b.performanceMetrics?.totalAssignedIssues || 0;
+              break;
+            case 'resolutionTime':
+              aVal = a.performanceMetrics?.averageResolutionTime || 999999;
+              bVal = b.performanceMetrics?.averageResolutionTime || 999999;
+              break;
+            default:
+              aVal = 0;
+              bVal = 0;
+          }
+          
+          return filters.sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+        });
+      }
+
+      setAuthorities(authoritiesData);
+      
+      // Calculate stats
+      const totalCount = authoritiesData.length;
+      const activeCount = authoritiesData.filter(a => a.status === 'active').length;
+      const inactiveCount = totalCount - activeCount;
+      
+      const byLevel = {
+        state: authoritiesData.filter(a => !a.jurisdiction?.district && !a.jurisdiction?.municipality).length,
+        district: authoritiesData.filter(a => a.jurisdiction?.district && !a.jurisdiction?.municipality).length,
+        municipality: authoritiesData.filter(a => a.jurisdiction?.municipality).length
+      };
+      
+      setStats({
+        total: totalCount,
+        active: activeCount,
+        inactive: inactiveCount,
+        byLevel
+      });
+      
     } catch (error) {
-      console.error('Error loading authorities:', error)
-      toast.error('Failed to load authorities')
+      console.error('Error loading authorities:', error);
+      toast.error('Failed to load authorities');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => {
+      const newFilters = { ...prev, [key]: value };
+      
+      // Reset dependent filters
+      if (key === 'state') {
+        newFilters.district = '';
+        newFilters.municipality = '';
+      }
+      if (key === 'district') {
+        newFilters.municipality = '';
+      }
+      if (key === 'jurisdictionLevel') {
+        if (value === 'state') {
+          newFilters.district = '';
+          newFilters.municipality = '';
+        } else if (value === 'district') {
+          newFilters.municipality = '';
+        }
+      }
+      
+      return newFilters;
+    });
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      searchQuery: '',
+      department: '',
+      jurisdictionLevel: '',
+      state: '',
+      district: '',
+      municipality: '',
+      status: '',
+      sortBy: 'name',
+      sortOrder: 'asc'
+    });
+  };
+
+  const hasActiveFilters = Object.values(filters).some(v => v && v !== 'name' && v !== 'asc');
 
   const handleCreateAuthority = () => {
-    setEditingAuthority(null)
-    setShowModal(true)
-  }
+    setEditingAuthority(null);
+    setShowModal(true);
+  };
 
   const handleEditAuthority = (authority) => {
-    setEditingAuthority(authority)
-    setShowModal(true)
-  }
+    setEditingAuthority(authority);
+    setShowModal(true);
+  };
 
   const handleDeleteAuthority = async (authorityId) => {
     if (!confirm('Are you sure you want to delete this authority? This action cannot be undone.')) {
-      return
+      return;
     }
 
     try {
-      await authoritiesAPI.delete(authorityId)
-      setAuthorities(prev => prev.filter(auth => auth.id !== authorityId))
-      toast.success('Authority deleted successfully')
+      await authoritiesAPI.delete(authorityId);
+      setAuthorities(prev => prev.filter(auth => auth._id !== authorityId));
+      toast.success('Authority deleted successfully');
     } catch (error) {
-      console.error('Error deleting authority:', error)
-      toast.error('Failed to delete authority')
+      console.error('Error deleting authority:', error);
+      toast.error('Failed to delete authority');
     }
-  }
+  };
 
-  const departments = [...new Set(ISSUE_CATEGORIES?.map(cat => cat.label))]
+  const getJurisdictionBadge = (authority) => {
+    const { state, district, municipality } = authority.jurisdiction || {};
+    
+    if (municipality) {
+      return {
+        icon: <MapPinned className="w-3 h-3" />,
+        text: 'Municipality',
+        color: 'bg-purple-100 text-purple-700 border-purple-200'
+      };
+    } else if (district) {
+      return {
+        icon: <Layers className="w-3 h-3" />,
+        text: 'District',
+        color: 'bg-blue-100 text-blue-700 border-blue-200'
+      };
+    } else {
+      return {
+        icon: <MapPin className="w-3 h-3" />,
+        text: 'State',
+        color: 'bg-green-100 text-green-700 border-green-200'
+      };
+    }
+  };
+
+  const getJurisdictionDisplay = (authority) => {
+    const { state, district, municipality } = authority.jurisdiction || {};
+    return [municipality, district, state].filter(Boolean).join(', ') || 'N/A';
+  };
+
+  const getRatingColor = (rating) => {
+    if (rating >= 4.5) return 'text-green-600';
+    if (rating >= 3.5) return 'text-blue-600';
+    if (rating >= 2.5) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const departments = [...new Set(ISSUE_CATEGORIES?.map(cat => cat.label))];
+  const availableDistricts = filters.state ? DISTRICTS_BY_STATE[filters.state] || [] : [];
+  const availableMunicipalities = filters.district ? MUNICIPALITIES_BY_DISTRICT[filters.district] || [] : [];
 
   if (loading && authorities?.length === 0) {
     return (
@@ -86,7 +248,7 @@ const AuthorityManager = () => {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -97,15 +259,27 @@ const AuthorityManager = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                <Building className="w-8 h-8 mr-3 text-primary-600" />
+                <Building className="w-8 h-8 mr-3 text-blue-600" />
                 Authority Management
               </h1>
               <p className="text-gray-600 mt-1">
-                Manage government departments and authority contacts
+                Manage government departments and authority contacts across all levels
               </p>
             </div>
             
-            <div className="mt-4 sm:mt-0">
+            <div className="mt-4 sm:mt-0 flex items-center gap-3">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`btn ${showFilters ? 'btn-primary' : 'btn-outline'} flex items-center`}
+              >
+                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                Filters
+                {hasActiveFilters && (
+                  <span className="ml-2 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    !
+                  </span>
+                )}
+              </button>
               <button
                 onClick={handleCreateAuthority}
                 className="btn btn-primary flex items-center"
@@ -115,186 +289,410 @@ const AuthorityManager = () => {
               </button>
             </div>
           </div>
-          
-          {/* Filters */}
-          <div className="mt-6 flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search authorities..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 form-input w-full text-black "
-                />
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-blue-700 font-medium">Total</p>
+                  <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+                </div>
+                <Building className="w-8 h-8 text-blue-600 opacity-50" />
               </div>
             </div>
             
-            <select
-              value={filterDepartment}
-              onChange={(e) => setFilterDepartment(e.target.value)}
-              className="form-select w-auto text-black"
-            >
-              <option value="">All Departments</option>
-              {departments?.map(dept => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-green-700 font-medium">Active</p>
+                  <p className="text-2xl font-bold text-green-900">{stats.active}</p>
+                </div>
+                <CheckCircle className="w-8 h-8 text-green-600 opacity-50" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-green-700 font-medium">State</p>
+                  <p className="text-2xl font-bold text-green-900">{stats.byLevel.state}</p>
+                </div>
+                <MapPin className="w-8 h-8 text-green-600 opacity-50" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-blue-700 font-medium">District</p>
+                  <p className="text-2xl font-bold text-blue-900">{stats.byLevel.district}</p>
+                </div>
+                <Layers className="w-8 h-8 text-blue-600 opacity-50" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-purple-700 font-medium">Municipal</p>
+                  <p className="text-2xl font-bold text-purple-900">{stats.byLevel.municipality}</p>
+                </div>
+                <MapPinned className="w-8 h-8 text-purple-600 opacity-50" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Advanced Filters Panel */}
+      {showFilters && (
+        <div className="bg-white border-b shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Filter className="w-5 h-5 mr-2" />
+                Advanced Filters
+              </h3>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Search */}
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search Authorities
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search by name..."
+                    value={filters.searchQuery}
+                    onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
+                    className="pl-10 form-input w-full text-black"
+                  />
+                </div>
+              </div>
+
+              {/* Jurisdiction Level */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Jurisdiction Level
+                </label>
+                <select
+                  value={filters.jurisdictionLevel}
+                  onChange={(e) => handleFilterChange('jurisdictionLevel', e.target.value)}
+                  className="form-select w-full text-black"
+                >
+                  <option value="">All Levels</option>
+                  <option value="state">🌐 State Level</option>
+                  <option value="district">🏛️ District Level</option>
+                  <option value="municipality">🏙️ Municipality Level</option>
+                </select>
+              </div>
+
+              {/* Department */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Department
+                </label>
+                <select
+                  value={filters.department}
+                  onChange={(e) => handleFilterChange('department', e.target.value)}
+                  className="form-select w-full text-black"
+                >
+                  <option value="">All Departments</option>
+                  {ISSUE_CATEGORIES?.map(cat => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.icon} {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* State */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  State/UT
+                </label>
+                <select
+                  value={filters.state}
+                  onChange={(e) => handleFilterChange('state', e.target.value)}
+                  className="form-select w-full text-black"
+                >
+                  <option value="">All States</option>
+                  {INDIAN_STATES.map(state => (
+                    <option key={state} value={state}>{state}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* District */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  District
+                </label>
+                <select
+                  value={filters.district}
+                  onChange={(e) => handleFilterChange('district', e.target.value)}
+                  disabled={!filters.state || availableDistricts.length === 0}
+                  className="form-select w-full text-black disabled:bg-gray-100"
+                >
+                  <option value="">All Districts</option>
+                  {availableDistricts.map(district => (
+                    <option key={district} value={district}>{district}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Municipality */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Municipality
+                </label>
+                <select
+                  value={filters.municipality}
+                  onChange={(e) => handleFilterChange('municipality', e.target.value)}
+                  disabled={!filters.district || availableMunicipalities.length === 0}
+                  className="form-select w-full text-black disabled:bg-gray-100"
+                >
+                  <option value="">All Municipalities</option>
+                  {availableMunicipalities.map(municipality => (
+                    <option key={municipality} value={municipality}>{municipality}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  className="form-select w-full text-black"
+                >
+                  <option value="">All Status</option>
+                  <option value="active">✅ Active</option>
+                  <option value="inactive">⏸️ Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Sorting */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium text-gray-700">Sort by:</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={filters.sortBy}
+                    onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                    className="form-select text-sm text-black"
+                  >
+                    <option value="name">Name</option>
+                    <option value="rating">⭐ Rating</option>
+                    <option value="resolved">✅ Issues Resolved</option>
+                    <option value="assignedIssues">📋 Total Assigned</option>
+                    <option value="resolutionTime">⚡ Avg Resolution Time</option>
+                  </select>
+                  
+                  <button
+                    onClick={() => handleFilterChange('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="btn btn-outline btn-sm flex items-center"
+                  >
+                    {filters.sortOrder === 'asc' ? '↑' : '↓'}
+                    {filters.sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Authorities Table */}
-        {console.log(authorities)}
-        <div className="bg-white shadow-sm rounded-lg border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Authority
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Department
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contact
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Issues Handled
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {console.log(authorities)}
-                {authorities?.map((authority) => (
-                  <tr key={authority._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-lg bg-primary-100 flex items-center justify-center">
-                            <Building className="h-5 w-5 text-primary-600" />
-                          </div>
+        {/* Authorities Grid */}
+        {authorities?.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
+            <Building className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No authorities found</h3>
+            <p className="text-gray-600 mb-6">
+              {hasActiveFilters 
+                ? 'Try adjusting your filters to see more results' 
+                : 'Get started by adding your first authority'
+              }
+            </p>
+            {hasActiveFilters ? (
+              <button onClick={clearFilters} className="btn btn-outline">
+                Clear Filters
+              </button>
+            ) : (
+              <button onClick={handleCreateAuthority} className="btn btn-primary">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Authority
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {authorities.map((authority) => {
+              console.log("Rendering authority:", authority);
+              const jurisdictionBadge = getJurisdictionBadge(authority);
+              const rating = authority.performanceMetrics?.rating || 0;
+              const resolved = authority.performanceMetrics?.resolvedIssues || 0;
+              const total = authority.performanceMetrics?.totalAssignedIssues || 0;
+              const avgTime = authority.performanceMetrics?.averageResolutionTime || 0;
+              const resolutionRate = total > 0 ? ((resolved / total) * 100).toFixed(1) : 0;
+
+              return (
+                <div
+                  key={authority._id}
+                  className="bg-white rounded-xl shadow-sm border hover:shadow-md transition-all duration-200"
+                >
+                  {/* Header */}
+                  <div className="p-6 border-b bg-gradient-to-r from-blue-50 to-purple-50">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border ${jurisdictionBadge.color}`}>
+                            {jurisdictionBadge.icon}
+                            {jurisdictionBadge.text}
+                          </span>
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                            authority.status === 'active'
+                              ? 'bg-green-100 text-green-800 border border-green-200' 
+                              : 'bg-red-100 text-red-800 border border-red-200'
+                          }`}>
+                            {authority.status === 'active' ? '✅ Active' : '⏸️ Inactive'}
+                          </span>
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {authority.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {authority.description}
-                          </div>
-                        </div>
+                        <h3 className="text-lg font-bold text-gray-900 mb-1">
+                          {authority.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 flex items-center">
+                          <MapPin className="w-3 h-3 mr-1" />
+                          {getJurisdictionDisplay(authority)}
+                        </p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {authority.department}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Mail className="w-3 h-3 mr-1" />
-                          {authority.contact.email}
-                        </div>
-                        <div className="flex items-center">
-                          <Phone className="w-3 h-3 mr-1" />
-                          {authority.contact.phone}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center">
-                        <Users className="w-4 h-4 mr-1" />
-                        {authority.performanceMetrics.totalAssignedIssues || 0} issues
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        authority.status 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {authority.status ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
+                      
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEditAuthority(authority)}
-                          className="text-primary-600 hover:text-primary-900"
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteAuthority(authority._id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  <div className="p-6">
+                    {/* Department */}
+                    <div className="mb-4">
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                        <Building className="w-4 h-4 mr-2" />
+                        {ISSUE_CATEGORIES.find(c => c.value === authority.department)?.label || authority.department}
+                      </span>
+                    </div>
+
+                    {/* Performance Metrics */}
+                    <div className="mb-4 p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-700 flex items-center">
+                          <BarChart3 className="w-4 h-4 mr-2" />
+                          Performance Metrics
+                        </h4>
+                        <div className="flex items-center gap-1">
+                          <Award className={`w-4 h-4 ${getRatingColor(rating)}`} />
+                          <span className={`text-lg font-bold ${getRatingColor(rating)}`}>
+                            {rating.toFixed(1)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="text-center p-2 bg-white rounded-lg border">
+                          <p className="text-xs text-gray-600 mb-1">Assigned</p>
+                          <p className="text-lg font-bold text-blue-600">{total}</p>
+                        </div>
+                        <div className="text-center p-2 bg-white rounded-lg border">
+                          <p className="text-xs text-gray-600 mb-1">Resolved</p>
+                          <p className="text-lg font-bold text-green-600">{resolved}</p>
+                        </div>
+                        <div className="text-center p-2 bg-white rounded-lg border">
+                          <p className="text-xs text-gray-600 mb-1">Rate</p>
+                          <p className="text-lg font-bold text-purple-600">{resolutionRate}%</p>
+                        </div>
+                      </div>
+
+                      {avgTime > 0 && (
+                        <div className="mt-3 flex items-center justify-center gap-2 text-sm text-gray-600">
+                          <Clock className="w-4 h-4" />
+                          <span>Avg Resolution: <strong>{avgTime}h</strong></span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Contact Info */}
+                    <div className="space-y-2">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                        <span className="truncate">{authority.contact?.email}</span>
+                      </div>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                        <span>{authority.contact?.phone}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          
-          {authorities?.length === 0 && (
-            <div className="text-center py-12">
-              <Building className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No authorities found</h3>
-              <p className="text-gray-600 mb-4">
-                {searchQuery || filterDepartment 
-                  ? 'Try adjusting your search filters' 
-                  : 'Get started by adding your first authority'
-                }
-              </p>
-              {!searchQuery && !filterDepartment && (
-                <button
-                  onClick={handleCreateAuthority}
-                  className="btn btn-primary"
-                >
-                  Add Authority
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* Authority Form Modal */}
+      {/* Authority Form Modal - Keep existing */}
       {showModal && (
         <AuthorityFormModal
           authority={editingAuthority}
           onClose={() => {
-            setShowModal(false)
-            setEditingAuthority(null)
+            setShowModal(false);
+            setEditingAuthority(null);
           }}
           onSave={(savedAuthority) => {
             if (editingAuthority) {
-              setAuthorities(prev => Array.isArray(prev) ? prev.map(auth => auth.id === savedAuthority._id ? savedAuthority : auth) : [savedAuthority])
+              setAuthorities(prev => Array.isArray(prev) ? prev.map(auth => auth._id === savedAuthority._id ? savedAuthority : auth) : [savedAuthority]);
             } else {
-              setAuthorities(prev => Array.isArray(prev) ? [...prev, savedAuthority] : [savedAuthority])
+              setAuthorities(prev => Array.isArray(prev) ? [...prev, savedAuthority] : [savedAuthority]);
             }
-            setShowModal(false)
-            setEditingAuthority(null)
+            setShowModal(false);
+            setEditingAuthority(null);
+            loadAuthorities(); // Reload to update stats
           }}
         />
       )}
     </div>
-  )
-}
+  );
+};
 
 // Authority Form Modal Component
 const AuthorityFormModal = ({ authority, onClose, onSave }) => {
