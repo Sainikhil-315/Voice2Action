@@ -228,7 +228,6 @@ router.get('/issues/pending', async (req, res) => {
 // @access  Admin
 router.put('/issues/:id/status', async (req, res) => {
   try {
-    // Validate status update
     const { error, value } = validateIssueStatusUpdate(req.body);
     if (error) {
       return res.status(400).json({
@@ -248,15 +247,13 @@ router.put('/issues/:id/status', async (req, res) => {
     const oldStatus = issue.status;
     const { status, adminNotes, rejectionReason, assignedTo, estimatedResolutionTime } = value;
 
-    // Update basic issue fields
     issue.adminNotes = adminNotes || '';
 
-    // Handle rejection
+    // Handle REJECTION
     if (status === 'rejected') {
       issue.status = 'rejected';
       issue.rejectionReason = rejectionReason;
       
-      // Add rejection timeline entry
       issue.timeline.push({
         action: 'rejected',
         timestamp: new Date(),
@@ -265,22 +262,47 @@ router.put('/issues/:id/status', async (req, res) => {
       });
     }
 
-    // Handle verification with AUTO-ASSIGNMENT
+    // ✅ Handle VERIFICATION with AUTOMATIC JURISDICTION-AWARE ASSIGNMENT
     else if (status === 'verified') {
       try {
-        // Find an active authority that handles this issue category
-        const suitableAuthority = await Authority.findOne({
-          department: issue.category,
-          status: 'active'
-        }).sort({ 
-          'performanceMetrics.rating': -1, // Highest rated first
-          'performanceMetrics.averageResolutionTime': 1 // Then fastest
-        });
-
+        // Step 1: Extract location from issue
+        const { lat, lng } = issue.location.coordinates;
+        
+        console.log(`\n🔍 Resolving jurisdiction for issue at: ${lat}, ${lng}`);
+        
+        // Step 2: Reverse geocode to get jurisdiction
+        let jurisdiction;
+        try {
+          jurisdiction = await reverseGeocode(lat, lng);
+          console.log('📍 Resolved jurisdiction:', jurisdiction);
+          
+          // Step 3: Update issue with jurisdiction info
+          issue.location.state = jurisdiction.state;
+          issue.location.district = jurisdiction.district;
+          issue.location.municipality = jurisdiction.municipality;
+          
+        } catch (geocodeError) {
+          console.error('⚠️ Reverse geocoding failed, using issue location data:', geocodeError.message);
+          // Fallback: use existing location data if reverse geocoding fails
+          jurisdiction = {
+            state: issue.location.state || null,
+            district: issue.location.district || null,
+            municipality: issue.location.municipality || null
+          };
+        }
+        
+        // Step 4: Find responsible authority using hierarchical lookup
+        const suitableAuthority = await Authority.findResponsibleAuthority(
+          issue.category,
+          jurisdiction.state,
+          jurisdiction.district,
+          jurisdiction.municipality
+        );
+        
         if (suitableAuthority) {
-          // Auto-assign to authority
+          // ✅ AUTO-ASSIGN to appropriate authority
           issue.assignedTo = suitableAuthority._id;
-          issue.status = 'assigned'; // Skip 'verified', go directly to 'assigned'
+          issue.status = 'assigned';
           
           // Update authority metrics
           await Authority.findByIdAndUpdate(suitableAuthority._id, {
@@ -288,7 +310,7 @@ router.put('/issues/:id/status', async (req, res) => {
             lastUpdated: new Date()
           });
 
-          // Add verification timeline entry
+          // Add verification timeline
           issue.timeline.push({
             action: 'verified',
             timestamp: new Date(),
@@ -296,13 +318,16 @@ router.put('/issues/:id/status', async (req, res) => {
             notes: adminNotes || 'Issue verified by admin'
           });
 
-          // Add assignment timeline entry
+          // Add assignment timeline
+          const jurisdictionLevel = suitableAuthority.getJurisdictionLevel();
+          const jurisdictionDisplay = suitableAuthority.getJurisdictionDisplay();
+          
           issue.timeline.push({
             action: 'assigned',
             timestamp: new Date(),
             user: req.user._id,
             authority: suitableAuthority._id,
-            notes: `Auto-assigned to ${suitableAuthority.name} (${suitableAuthority.department})`
+            notes: `Auto-assigned to ${suitableAuthority.name} (${jurisdictionLevel}-level: ${jurisdictionDisplay})`
           });
 
           // Send notification to authority
@@ -317,22 +342,36 @@ router.put('/issues/:id/status', async (req, res) => {
             });
           }
 
-          console.log(`✅ Issue ${issue._id} auto-assigned to ${suitableAuthority.name}`);
+          console.log(`✅ Issue ${issue._id} auto-assigned to ${suitableAuthority.name} (${jurisdictionLevel}-level)`);
+          console.log(`   📍 Location: ${jurisdictionDisplay}`);
+          console.log(`   🏢 Department: ${issue.category}`);
+          
         } else {
-          // No authority found - keep as verified
+          // ⚠️ No authority found - keep as verified
           issue.status = 'verified';
+          
+          const locationStr = [
+            jurisdiction.municipality,
+            jurisdiction.district,
+            jurisdiction.state
+          ].filter(Boolean).join(', ') || 'Unknown location';
           
           issue.timeline.push({
             action: 'verified',
             timestamp: new Date(),
             user: req.user._id,
-            notes: `${adminNotes || 'Issue verified'} - No authority available for ${issue.category}`
+            notes: `${adminNotes || 'Issue verified'} - No ${issue.category} authority available for ${locationStr}`
           });
 
-          console.warn(`⚠️ No authority found for category: ${issue.category}`);
+          console.warn(`⚠️ No authority found for:`);
+          console.warn(`   Category: ${issue.category}`);
+          console.warn(`   Location: ${locationStr}`);
+          console.warn(`   Issue will remain VERIFIED until authority is created`);
         }
+        
       } catch (assignError) {
-        console.error('Auto-assignment error:', assignError);
+        console.error('❌ Auto-assignment error:', assignError);
+        
         // Fallback: Keep as verified if auto-assignment fails
         issue.status = 'verified';
         
@@ -340,23 +379,21 @@ router.put('/issues/:id/status', async (req, res) => {
           action: 'verified',
           timestamp: new Date(),
           user: req.user._id,
-          notes: adminNotes || 'Issue verified by admin'
+          notes: `${adminNotes || 'Issue verified by admin'} - Auto-assignment failed: ${assignError.message}`
         });
       }
     }
 
-    // Handle manual assignment (admin explicitly assigns to specific authority)
+    // Handle MANUAL ASSIGNMENT (admin explicitly assigns)
     else if (status === 'assigned' && assignedTo) {
       issue.status = 'assigned';
       issue.assignedTo = assignedTo;
       
-      // Update authority metrics
       await Authority.findByIdAndUpdate(assignedTo, {
         $inc: { 'performanceMetrics.totalAssignedIssues': 1 },
         lastUpdated: new Date()
       });
 
-      // Get authority details for timeline
       const authority = await Authority.findById(assignedTo);
       
       issue.timeline.push({
@@ -367,7 +404,6 @@ router.put('/issues/:id/status', async (req, res) => {
         notes: adminNotes || `Manually assigned to ${authority?.name || 'authority'}`
       });
 
-      // Send notification to manually assigned authority
       if (authority) {
         const notificationService = req.app.get('notificationService');
         if (notificationService) {
@@ -382,7 +418,7 @@ router.put('/issues/:id/status', async (req, res) => {
       }
     }
 
-    // Handle other status changes (in_progress, resolved, closed)
+    // Handle other status changes
     else {
       issue.status = status;
       
@@ -402,13 +438,12 @@ router.put('/issues/:id/status', async (req, res) => {
     // Save the updated issue
     await issue.save();
 
-    // Update user stats if issue is resolved
+    // Update user stats if resolved
     if (status === 'resolved' && oldStatus !== 'resolved') {
       await User.findByIdAndUpdate(issue.reporter._id, {
         $inc: { 'stats.issuesResolved': 1 }
       });
 
-      // Recalculate authority's average resolution time
       if (issue.assignedTo) {
         const resolvedIssues = await Issue.find({
           assignedTo: issue.assignedTo,
@@ -427,7 +462,7 @@ router.put('/issues/:id/status', async (req, res) => {
       }
     }
 
-    // Send status update notification to reporter
+    // Send notification to reporter
     const notificationService = req.app.get('notificationService');
     if (notificationService && issue.reporter) {
       setImmediate(async () => {
@@ -454,18 +489,28 @@ router.put('/issues/:id/status', async (req, res) => {
       rejectionReason: issue.rejectionReason,
       assignedTo: issue.assignedTo,
       timeline: issue.timeline,
-      estimatedResolutionTime: issue.estimatedResolutionTime
+      estimatedResolutionTime: issue.estimatedResolutionTime,
+      jurisdiction: {
+        state: issue.location.state,
+        district: issue.location.district,
+        municipality: issue.location.municipality
+      }
     };
 
     // Add authority details if assigned
     if (issue.assignedTo) {
-      const assignedAuthority = await Authority.findById(issue.assignedTo).select('name department contact.email');
-      response.authority = assignedAuthority;
+      const assignedAuthority = await Authority.findById(issue.assignedTo);
+      response.authority = {
+        name: assignedAuthority.name,
+        department: assignedAuthority.department,
+        jurisdictionLevel: assignedAuthority.getJurisdictionLevel(),
+        jurisdiction: assignedAuthority.getJurisdictionDisplay()
+      };
     }
 
     res.json({
       success: true,
-      message: `Issue ${issue.status} successfully${issue.assignedTo && oldStatus !== 'assigned' ? ' and assigned to authority' : ''}`,
+      message: `Issue ${issue.status} successfully${issue.assignedTo && oldStatus !== 'assigned' ? ' and auto-assigned to appropriate authority' : ''}`,
       data: { issue: response }
     });
 
@@ -824,5 +869,36 @@ router.get('/analytics', async (req, res) => {
     });
   }
 });
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const fetch = require('node-fetch');
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
+    
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Voice2Action/1.0'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (!data || !data.address) {
+      throw new Error('No address found');
+    }
+    
+    // Extract jurisdiction from OSM data
+    return {
+      state: data.address.state || null,
+      district: data.address.county || data.address.district || null,
+      municipality: data.address.city || data.address.town || data.address.village || null,
+      fullAddress: data.display_name
+    };
+    
+  } catch (error) {
+    console.error('Reverse geocoding error:', error);
+    throw new Error(`Failed to resolve location: ${error.message}`);
+  }
+}
 
 module.exports = router;

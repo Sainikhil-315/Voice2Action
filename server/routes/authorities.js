@@ -13,7 +13,9 @@ const router = express.Router();
 
 // Utility: Generate 6-digit OTP
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  let otp = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log("OTP generated:", otp);
+  return otp;
 }
 
 // Utility: Send OTP via email

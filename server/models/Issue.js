@@ -58,8 +58,19 @@ const issueSchema = new mongoose.Schema({
       }
     },
     landmark: String,
-    ward: String,
-    district: String
+    state: {
+      type: String,
+      default: null
+    },
+    district: {
+      type: String,
+      default: null
+    },
+    municipality: {
+      type: String,
+      default: null
+    },
+    ward: String
   },
   media: [{
     type: {
@@ -180,42 +191,108 @@ const issueSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field before saving
+issueSchema.index({ title: 'text', description: 'text' });
+issueSchema.index({ status: 1, createdAt: -1 });
+issueSchema.index({ reporter: 1, createdAt: -1 });
+issueSchema.index({ assignedTo: 1, status: 1 });
+issueSchema.index({ category: 1, status: 1 });
+issueSchema.index({ priority: 1, status: 1 });
+issueSchema.index({ 'location.coordinates': '2dsphere' });
+issueSchema.index({ 
+  'location.state': 1, 
+  'location.district': 1, 
+  'location.municipality': 1 
+});
+
+// ✅ PRE-SAVE: Update timestamp
 issueSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
 
-// Add text index for search
-issueSchema.index({ title: 'text', description: 'text' });
-
-// Add timeline entry when status changes
+// ✅ PRE-SAVE: Add timeline entry on status change
 issueSchema.pre('save', function(next) {
   if (this.isModified('status') && !this.isNew) {
-    this.timeline.push({
-      action: this.status,
-      timestamp: new Date(),
-      notes: this.adminNotes || ''
-    });
+    // Only add if not already added manually
+    const lastTimeline = this.timeline[this.timeline.length - 1];
+    if (!lastTimeline || lastTimeline.action !== this.status) {
+      this.timeline.push({
+        action: this.status,
+        timestamp: new Date(),
+        notes: this.adminNotes || ''
+      });
+    }
   }
   next();
 });
 
-// Calculate actual resolution time when resolved
+// ✅ PRE-SAVE: Calculate resolution time when resolved
 issueSchema.pre('save', function(next) {
   if (this.status === 'resolved' && !this.actualResolutionTime) {
-    const resolutionTime = (Date.now() - this.createdAt.getTime()) / (1000 * 60 * 60); // hours
+    this.resolvedAt = new Date();
+    
+    // Calculate from work start time if available, otherwise from creation
+    const startTime = this.workStartedAt || this.createdAt;
+    const resolutionTime = (this.resolvedAt - startTime) / (1000 * 60 * 60); // hours
+    
     this.actualResolutionTime = Math.round(resolutionTime * 100) / 100;
   }
   next();
 });
 
-// Indexes for efficient queries
-issueSchema.index({ status: 1, createdAt: -1 });
-issueSchema.index({ reporter: 1, createdAt: -1 });
-issueSchema.index({ assignedTo: 1, status: 1 });
-issueSchema.index({ category: 1, status: 1 });
-issueSchema.index({ 'location.coordinates': '2dsphere' }); // Geospatial index
-issueSchema.index({ priority: 1, status: 1 });
+// ✅ METHOD: Get jurisdiction display string
+issueSchema.methods.getJurisdictionDisplay = function() {
+  const parts = [
+    this.location.municipality,
+    this.location.district,
+    this.location.state
+  ].filter(Boolean);
+  
+  return parts.length > 0 ? parts.join(', ') : 'Unknown location';
+};
+
+// ✅ METHOD: Check if jurisdiction is complete
+issueSchema.methods.hasCompleteJurisdiction = function() {
+  return !!(this.location.state && this.location.district);
+};
+
+// ✅ STATIC: Get issues by jurisdiction
+issueSchema.statics.findByJurisdiction = function(state, district = null, municipality = null) {
+  const query = { 'location.state': state };
+  
+  if (district) {
+    query['location.district'] = district;
+  }
+  
+  if (municipality) {
+    query['location.municipality'] = municipality;
+  }
+  
+  return this.find(query);
+};
+
+// ✅ STATIC: Get jurisdiction analytics
+issueSchema.statics.getJurisdictionStats = async function() {
+  return this.aggregate([
+    {
+      $group: {
+        _id: {
+          state: '$location.state',
+          district: '$location.district',
+          municipality: '$location.municipality'
+        },
+        total: { $sum: 1 },
+        pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
+        verified: { $sum: { $cond: [{ $eq: ['$status', 'verified'] }, 1, 0] } },
+        rejected: { $sum: { $cond: [{ $eq: ['$status', 'rejected'] }, 1, 0] } },
+        in_progress: { $sum: { $cond: [{ $eq: ['$status', 'in_progress'] }, 1, 0] } },
+        resolved: { $sum: { $cond: [{ $eq: ['$status', 'resolved'] }, 1, 0] } }
+      }
+    },
+    {
+      $sort: { total: -1 }
+    }
+  ]);
+};
 
 module.exports = mongoose.model('Issue', issueSchema);

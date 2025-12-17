@@ -1,4 +1,4 @@
-// models/Authority.js
+// models/Authority.js - Updated with Jurisdiction Model
 const mongoose = require('mongoose');
 
 const authoritySchema = new mongoose.Schema({
@@ -8,6 +8,7 @@ const authoritySchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Name cannot exceed 100 characters']
   },
+  
   department: {
     type: String,
     required: [true, 'Department is required'],
@@ -21,11 +22,32 @@ const authoritySchema = new mongoose.Schema({
       'parks_recreation',
       'street_lighting',
       'drainage',
-      'municipal_corporation',
-      'police',
+      'noise_pollution',
+      'illegal_construction',
+      'animal_control',
       'other'
     ]
   },
+  
+  // Hierarchical jurisdiction model
+  jurisdiction: {
+    state: {
+      type: String,
+      required: [true, 'State is required for jurisdiction'],
+      trim: true
+    },
+    district: {
+      type: String,
+      default: null,
+      trim: true
+    },
+    municipality: {
+      type: String,
+      default: null,
+      trim: true
+    }
+  },
+  
   contact: {
     email: {
       type: String,
@@ -47,6 +69,7 @@ const authoritySchema = new mongoose.Schema({
       required: [true, 'Office address is required']
     }
   },
+  
   serviceArea: {
     description: {
       type: String,
@@ -59,7 +82,7 @@ const authoritySchema = new mongoose.Schema({
         default: 'Polygon'
       },
       coordinates: {
-        type: [[[Number]]], // GeoJSON format
+        type: Array, // Accepts both Polygon ([[[]]]) and MultiPolygon ([[[[]]]])
         required: [true, 'Service boundaries are required']
       }
     },
@@ -67,6 +90,7 @@ const authoritySchema = new mongoose.Schema({
     districts: [String],
     postalCodes: [String]
   },
+  
   workingHours: {
     monday: { start: String, end: String },
     tuesday: { start: String, end: String },
@@ -76,6 +100,7 @@ const authoritySchema = new mongoose.Schema({
     saturday: { start: String, end: String },
     sunday: { start: String, end: String }
   },
+  
   emergencyContact: {
     available247: {
       type: Boolean,
@@ -84,6 +109,7 @@ const authoritySchema = new mongoose.Schema({
     phone: String,
     email: String
   },
+  
   performanceMetrics: {
     totalAssignedIssues: {
       type: Number,
@@ -94,7 +120,7 @@ const authoritySchema = new mongoose.Schema({
       default: 0
     },
     averageResolutionTime: {
-      type: Number, // in hours
+      type: Number,  // in hours
       default: 0
     },
     rating: {
@@ -104,10 +130,11 @@ const authoritySchema = new mongoose.Schema({
       default: 5
     },
     responseRate: {
-      type: Number, // percentage
+      type: Number,  // percentage
       default: 100
     }
   },
+  
   notificationPreferences: {
     emailNotifications: {
       type: Boolean,
@@ -122,46 +149,160 @@ const authoritySchema = new mongoose.Schema({
       default: false
     }
   },
+  
   status: {
     type: String,
     enum: ['active', 'inactive', 'suspended'],
     default: 'active'
   },
+  
   headOfDepartment: {
     name: String,
     designation: String,
     contact: String
   },
+  
   budget: {
     annual: Number,
     allocated: Number,
     spent: Number
   },
+  
+  lastLogin: {
+    type: Date
+  },
+  
   lastUpdated: {
     type: Date,
     default: Date.now
   },
+  
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-// Index service area for geospatial queries
+// ✅ INDEXES: Critical for performance
+// 1. Geospatial index for location queries
 authoritySchema.index({ 'serviceArea.boundaries': '2dsphere' });
+
+// 2. Jurisdiction-based queries (most important)
+authoritySchema.index({ 
+  'jurisdiction.state': 1, 
+  'jurisdiction.district': 1, 
+  'jurisdiction.municipality': 1,
+  department: 1,
+  status: 1 
+});
+
+// 3. Department + status (for finding active authorities)
 authoritySchema.index({ department: 1, status: 1 });
+
+// 4. Performance metrics
 authoritySchema.index({ 'performanceMetrics.rating': -1 });
 
-// Method to check if a location is within service area
-authoritySchema.methods.isLocationInServiceArea = function(lat, lng) {
-  // This would use turf.js in the actual implementation
-  // For now, return true as placeholder
-  return true;
+// ✅ VALIDATION: Ensure jurisdiction hierarchy rules
+authoritySchema.pre('validate', function(next) {
+  // Rule: Municipality cannot exist without district
+  if (this.jurisdiction.municipality && !this.jurisdiction.district) {
+    return next(new Error('Municipality cannot be set without district'));
+  }
+  
+  // Rule: District cannot exist without state
+  if (this.jurisdiction.district && !this.jurisdiction.state) {
+    return next(new Error('District cannot be set without state'));
+  }
+  
+  next();
+});
+
+// ✅ METHOD: Get jurisdiction level
+authoritySchema.methods.getJurisdictionLevel = function() {
+  if (this.jurisdiction.municipality) return 'municipality';
+  if (this.jurisdiction.district) return 'district';
+  return 'state';
 };
 
-// Method to update performance metrics
+// ✅ METHOD: Get jurisdiction display name
+authoritySchema.methods.getJurisdictionDisplay = function() {
+  if (this.jurisdiction.municipality) {
+    return `${this.jurisdiction.municipality}, ${this.jurisdiction.district}, ${this.jurisdiction.state}`;
+  }
+  if (this.jurisdiction.district) {
+    return `${this.jurisdiction.district}, ${this.jurisdiction.state}`;
+  }
+  return this.jurisdiction.state;
+};
+
+// ✅ METHOD: Check if location is in service area (simplified)
+authoritySchema.methods.servesLocation = function(state, district = null, municipality = null) {
+  // State must match
+  if (this.jurisdiction.state !== state) return false;
+  
+  // If authority is state-level, it serves all locations in the state
+  if (!this.jurisdiction.district) return true;
+  
+  // If authority is district-level, district must match
+  if (this.jurisdiction.district) {
+    if (this.jurisdiction.district !== district) return false;
+    
+    // If authority is district-level (no municipality), it serves all non-municipal areas
+    if (!this.jurisdiction.municipality) {
+      return !municipality;  // Only serve if location has no municipality
+    }
+  }
+  
+  // If authority is municipality-level, municipality must match
+  if (this.jurisdiction.municipality) {
+    return this.jurisdiction.municipality === municipality;
+  }
+  
+  return false;
+};
+
+// ✅ STATIC METHOD: Find responsible authority for a location
+authoritySchema.statics.findResponsibleAuthority = async function(department, state, district = null, municipality = null) {
+  // Priority 1: Municipality-level authority
+  if (municipality) {
+    const municipalAuthority = await this.findOne({
+      department,
+      status: 'active',
+      'jurisdiction.state': state,
+      'jurisdiction.district': district,
+      'jurisdiction.municipality': municipality
+    }).sort({ 'performanceMetrics.rating': -1 });
+    
+    if (municipalAuthority) return municipalAuthority;
+  }
+  
+  // Priority 2: District-level authority
+  if (district) {
+    const districtAuthority = await this.findOne({
+      department,
+      status: 'active',
+      'jurisdiction.state': state,
+      'jurisdiction.district': district,
+      'jurisdiction.municipality': null
+    }).sort({ 'performanceMetrics.rating': -1 });
+    
+    if (districtAuthority) return districtAuthority;
+  }
+  
+  // Priority 3: State-level authority (fallback)
+  const stateAuthority = await this.findOne({
+    department,
+    status: 'active',
+    'jurisdiction.state': state,
+    'jurisdiction.district': null,
+    'jurisdiction.municipality': null
+  }).sort({ 'performanceMetrics.rating': -1 });
+  
+  return stateAuthority;
+};
+
+// ✅ METHOD: Update performance metrics
 authoritySchema.methods.updateMetrics = function() {
-  // Calculate average resolution time, response rate etc.
   this.lastUpdated = new Date();
   return this.save();
 };
