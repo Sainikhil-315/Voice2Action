@@ -304,12 +304,12 @@ const AdminDashboard = () => {
                   <h2 className="text-lg font-medium text-gray-900">
                     Pending Issues
                   </h2>
-                  <a
-                    href="/admin/verification"
+                  <Link
+                    to="/admin/verification"
                     className="text-primary-600 hover:text-primary-700 text-sm font-medium"
                   >
                     View all
-                  </a>
+                  </Link>
                 </div>
               </div>
 
@@ -443,27 +443,27 @@ const AdminDashboard = () => {
                   <Eye className="w-4 h-4 mr-2" />
                   Review Issues
                 </Link>
-                <a
-                  href="/admin/analytics"
+                <Link
+                  to="/admin/analytics"
                   className="w-full btn btn-outline flex items-center justify-center"
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   View Analytics
-                </a>
-                <a
-                  href="/admin/authorities"
+                </Link>
+                <Link
+                  to="/admin/authorities"
                   className="w-full btn btn-outline flex items-center justify-center"
                 >
                   <Users className="w-4 h-4 mr-2" />
                   Manage Authorities
-                </a>
-                <a
-                  href="/admin/settings"
+                </Link>
+                <Link
+                  to="/admin/settings"
                   className="w-full btn btn-outline flex items-center justify-center"
                 >
                   <Settings className="w-4 h-4 mr-2" />
                   System Settings
-                </a>
+                </Link>
               </div>
             </div>
 

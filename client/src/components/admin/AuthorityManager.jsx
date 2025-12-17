@@ -10,11 +10,12 @@ import {
   Building,
   Users,
   Search,
-  Filter
+  Filter,
+  X
 } from 'lucide-react'
 import { authoritiesAPI } from '../../utils/api'
 import { formatRelativeTime } from '../../utils/helpers'
-import { ISSUE_CATEGORIES } from '../../utils/constants'
+import { ISSUE_CATEGORIES, DISTRICTS_BY_STATE, MUNICIPALITIES_BY_DISTRICT, INDIAN_STATES } from '../../utils/constants'
 import LoadingButton from '../common/LoadingButton'
 import { SkeletonLoader } from '../common/Loader'
 import toast from 'react-hot-toast'
@@ -301,147 +302,303 @@ const AuthorityFormModal = ({ authority, onClose, onSave }) => {
     name: authority?.name || '',
     department: authority?.department || '',
     description: authority?.description || '',
-    email: authority?.email || '',
-    phone: authority?.phone || '',
-    address: authority?.address || '',
-    categories: authority?.categories || [],
-    active: authority?.active !== undefined ? authority.active : true
-  })
-  const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState({})
+    
+    // Jurisdiction fields
+    state: authority?.jurisdiction?.state || '',
+    district: authority?.jurisdiction?.district || null,
+    municipality: authority?.jurisdiction?.municipality || null,
+    
+    // Contact info
+    email: authority?.contact?.email || '',
+    phone: authority?.contact?.phone || '',
+    address: authority?.contact?.officeAddress || '',
+    
+    active: authority?.status === 'active'
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [availableDistricts, setAvailableDistricts] = useState([]);
+  const [availableMunicipalities, setAvailableMunicipalities] = useState([]);
+
+  // Update districts when state changes
+  useEffect(() => {
+    if (formData.state) {
+      setAvailableDistricts(DISTRICTS_BY_STATE[formData.state] || []);
+    } else {
+      setAvailableDistricts([]);
+      setFormData(prev => ({ ...prev, district: null, municipality: null }));
+    }
+  }, [formData.state]);
+
+  // Update municipalities when district changes
+  useEffect(() => {
+    if (formData.district) {
+      setAvailableMunicipalities(MUNICIPALITIES_BY_DISTRICT[formData.district] || []);
+    } else {
+      setAvailableMunicipalities([]);
+      setFormData(prev => ({ ...prev, municipality: null }));
+    }
+  }, [formData.district]);
+
+  // Auto-generate authority name based on jurisdiction
+  useEffect(() => {
+    if (formData.state && formData.department) {
+      let name = '';
+      
+      if (formData.municipality) {
+        name = `${formData.municipality} Municipal Corporation - ${ISSUE_CATEGORIES.find(c => c.value === formData.department)?.label || formData.department}`;
+      } else if (formData.district) {
+        name = `${formData.district} District - ${ISSUE_CATEGORIES.find(c => c.value === formData.department)?.label || formData.department}`;
+      } else {
+        name = `${formData.state} State ${ISSUE_CATEGORIES.find(c => c.value === formData.department)?.label || formData.department} Department`;
+      }
+      
+      setFormData(prev => ({ ...prev, name }));
+    }
+  }, [formData.state, formData.district, formData.municipality, formData.department]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
     
     // Validation
-    const newErrors = {}
-    if (!formData.name.trim()) newErrors.name = 'Name is required'
-    if (!formData.department) newErrors.department = 'Department is required'
-    if (!formData.email.trim()) newErrors.email = 'Email is required'
-    if (!formData.phone.trim()) newErrors.phone = 'Phone is required'
-    if (formData.categories?.length === 0) newErrors.categories = 'At least one category is required'
+    const newErrors = {};
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.department) newErrors.department = 'Department is required';
+    if (!formData.state) newErrors.state = 'State is required';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
+    
     if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
+      setErrors(newErrors);
+      return;
     }
 
-    // Build payload for backend (add default boundaries for serviceArea)
-    const defaultPolygon = [
-      [
-        [77.5946, 12.9716], // Point 1 (lng, lat)
-        [77.5950, 12.9716], // Point 2
-        [77.5950, 12.9720], // Point 3
-        [77.5946, 12.9720], // Point 4
-        [77.5946, 12.9716]  // Closing the polygon
-      ]
-    ];
+    // Build payload with jurisdiction model
     const payload = {
       name: formData.name,
       department: formData.department,
+      
+      jurisdiction: {
+        state: formData.state,
+        district: formData.district || null,
+        municipality: formData.municipality || null
+      },
+      
       contact: {
         email: formData.email,
         phone: formData.phone,
         officeAddress: formData.address || 'N/A'
       },
+      
       serviceArea: {
-        description: formData.description || 'N/A',
+        description: formData.description || generateServiceAreaDescription(),
         boundaries: {
           type: 'Polygon',
-          coordinates: defaultPolygon
+          coordinates: getDefaultBoundaries()
         }
       },
-      active: formData.active
-    }
+      
+      status: formData.active ? 'active' : 'inactive'
+    };
 
-    setLoading(true)
+    setLoading(true);
     try {
-      let response
+      let response;
       if (authority) {
-        response = await authoritiesAPI.update(authority._id, payload)
+        response = await authoritiesAPI.update(authority._id, payload);
       } else {
-        response = await authoritiesAPI.create(payload)
+        response = await authoritiesAPI.create(payload);
       }
-      toast.success(`Authority ${authority ? 'updated' : 'created'} successfully`)
-      onSave(response.data.authority)
+      
+      toast.success(`Authority ${authority ? 'updated' : 'created'} successfully`);
+      onSave(response.data.authority);
     } catch (error) {
-      console.error('Error saving authority:', error)
-      toast.error(`Failed to ${authority ? 'update' : 'create'} authority`)
+      console.error('Error saving authority:', error);
+      toast.error(error.response?.data?.message || `Failed to ${authority ? 'update' : 'create'} authority`);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleCategoryChange = (categoryValue, checked) => {
-    setFormData(prev => ({
-      ...prev,
-      categories: checked
-        ? [...prev.categories, categoryValue]
-        : prev.categories.filter(cat => cat !== categoryValue)
-    }))
-  }
+  const generateServiceAreaDescription = () => {
+    if (formData.municipality) {
+      return `Handles ${ISSUE_CATEGORIES.find(c => c.value === formData.department)?.label} issues within ${formData.municipality} municipality limits`;
+    } else if (formData.district) {
+      return `Handles ${ISSUE_CATEGORIES.find(c => c.value === formData.department)?.label} issues for ${formData.district} district (excluding municipalities)`;
+    } else {
+      return `State-level authority for ${ISSUE_CATEGORIES.find(c => c.value === formData.department)?.label} across ${formData.state}`;
+    }
+  };
+
+  const getDefaultBoundaries = () => {
+    // Default polygon (placeholder - should be replaced with actual boundaries)
+    return [[[77.5946, 12.9716], [77.5950, 12.9716], [77.5950, 12.9720], [77.5946, 12.9720], [77.5946, 12.9716]]];
+  };
+
+  const getJurisdictionLevel = () => {
+    if (formData.municipality) return 'Municipality Level';
+    if (formData.district) return 'District Level';
+    if (formData.state) return 'State Level';
+    return 'Not Set';
+  };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
         
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-          {/* Modal Header */}
-          <div className="bg-white px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">
-              {authority ? 'Edit Authority' : 'Add New Authority'}
-            </h3>
+        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold text-white">
+                {authority ? 'Edit Authority' : 'Add New Authority'}
+              </h3>
+              <button onClick={onClose} className="text-white hover:text-gray-200">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
           </div>
 
-          {/* Modal Content */}
-          <form onSubmit={handleSubmit} className="bg-white px-6 py-6">
-            <div className="grid grid-cols-1 gap-6">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Authority Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className={`form-input w-full text-black  ${errors.name ? 'border-red-300' : ''}`}
-                    placeholder="e.g., Municipal Corporation"
-                  />
-                  {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Department *
-                  </label>
-                  <select
-                    value={formData.department}
-                    onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                    className={`form-select w-full text-black ${errors.department ? 'border-red-300' : ''}`}
-                  >
-                    <option value="">Select Department</option>
-                    {ISSUE_CATEGORIES?.map(cat => (
-                      <option key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.department && <p className="text-red-600 text-sm mt-1">{errors.department}</p>}
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="bg-white px-6 py-6 max-h-[70vh] overflow-y-auto">
+            <div className="space-y-6">
+              
+              {/* Jurisdiction Info Banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-900">Jurisdiction Level</p>
+                    <p className="text-lg font-bold text-blue-600">{getJurisdictionLevel()}</p>
+                  </div>
+                  <div className="text-xs text-blue-700">
+                    {formData.municipality && '🏙️ Municipality'}
+                    {!formData.municipality && formData.district && '🏛️ District'}
+                    {!formData.municipality && !formData.district && formData.state && '🌐 State'}
+                  </div>
                 </div>
               </div>
 
+              {/* Department Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
+                  Department * <span className="text-red-500">⚠️ Select this first</span>
+                </label>
+                <select
+                  value={formData.department}
+                  onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                  className={`form-select w-full text-black ${errors.department ? 'border-red-300' : ''}`}
+                >
+                  <option value="">Select Department</option>
+                  {ISSUE_CATEGORIES.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  ))}
+                </select>
+                {errors.department && <p className="text-red-600 text-sm mt-1">{errors.department}</p>}
+              </div>
+
+              {/* Jurisdiction Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* State */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    State/UT *
+                  </label>
+                  <select
+                    value={formData.state}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      state: e.target.value,
+                      district: null,
+                      municipality: null 
+                    }))}
+                    className={`form-select w-full text-black ${errors.state ? 'border-red-300' : ''}`}
+                  >
+                    <option value="">Select State</option>
+                    {INDIAN_STATES.map(state => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
+                  {errors.state && <p className="text-red-600 text-sm mt-1">{errors.state}</p>}
+                </div>
+
+                {/* District */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    District (optional)
+                  </label>
+                  <select
+                    value={formData.district || ''}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      district: e.target.value || null,
+                      municipality: null 
+                    }))}
+                    disabled={!formData.state || availableDistricts.length === 0}
+                    className="form-select w-full text-black disabled:bg-gray-100"
+                  >
+                    <option value="">No District (State-level)</option>
+                    {availableDistricts.map(district => (
+                      <option key={district} value={district}>{district}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave empty for state-level authority
+                  </p>
+                </div>
+
+                {/* Municipality */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Municipality (optional)
+                  </label>
+                  <select
+                    value={formData.municipality || ''}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      municipality: e.target.value || null 
+                    }))}
+                    disabled={!formData.district || availableMunicipalities.length === 0}
+                    className="form-select w-full text-black disabled:bg-gray-100"
+                  >
+                    <option value="">No Municipality (District-level)</option>
+                    {availableMunicipalities.map(municipality => (
+                      <option key={municipality} value={municipality}>{municipality}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave empty for district-level authority
+                  </p>
+                </div>
+              </div>
+
+              {/* Auto-generated Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Authority Name (Auto-generated)
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className={`form-input w-full text-black ${errors.name ? 'border-red-300' : ''}`}
+                  placeholder="Will be auto-generated based on jurisdiction"
+                />
+                {errors.name && <p className="text-red-600 text-sm mt-1">{errors.name}</p>}
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description (optional)
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  rows={3}
-                  className="form-textarea w-full text-black "
-                  placeholder="Brief description of the authority's responsibilities"
+                  rows={2}
+                  className="form-textarea w-full text-black"
+                  placeholder="Brief description of responsibilities (auto-generated if empty)"
                 />
               </div>
 
@@ -455,8 +612,8 @@ const AuthorityFormModal = ({ authority, onClose, onSave }) => {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className={`form-input w-full text-black  ${errors.email ? 'border-red-300' : ''}`}
-                    placeholder="contact@authority.gov"
+                    className={`form-input w-full text-black ${errors.email ? 'border-red-300' : ''}`}
+                    placeholder="authority@gov.in"
                   />
                   {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email}</p>}
                 </div>
@@ -469,47 +626,25 @@ const AuthorityFormModal = ({ authority, onClose, onSave }) => {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className={`form-input w-full text-black  ${errors.phone ? 'border-red-300' : ''}`}
+                    className={`form-input w-full text-black ${errors.phone ? 'border-red-300' : ''}`}
                     placeholder="+91-9876543210"
                   />
                   {errors.phone && <p className="text-red-600 text-sm mt-1">{errors.phone}</p>}
                 </div>
               </div>
 
+              {/* Office Address */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Address
+                  Office Address
                 </label>
                 <input
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  className="form-input w-full text-black "
+                  className="form-input w-full text-black"
                   placeholder="Office address"
                 />
-              </div>
-
-              {/* Issue Categories */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Handles Issue Categories *
-                </label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {ISSUE_CATEGORIES?.map(category => (
-                    <label key={category.value} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={formData.categories.includes(category.value)}
-                        onChange={(e) => handleCategoryChange(category.value, e.target.checked)}
-                        className="form-checkbox mr-2"
-                      />
-                      <span className="text-sm text-gray-700">
-                        {category.icon} {category.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                {errors.categories && <p className="text-red-600 text-sm mt-1">{errors.categories}</p>}
               </div>
 
               {/* Status */}
@@ -527,7 +662,7 @@ const AuthorityFormModal = ({ authority, onClose, onSave }) => {
               </div>
             </div>
 
-            {/* Modal Actions */}
+            {/* Actions */}
             <div className="mt-6 flex justify-end space-x-3 pt-6 border-t">
               <button
                 type="button"
@@ -549,7 +684,8 @@ const AuthorityFormModal = ({ authority, onClose, onSave }) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AuthorityManager
+
+export default AuthorityManager;

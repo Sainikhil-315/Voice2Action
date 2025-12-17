@@ -273,6 +273,27 @@ export const PWA_CONFIG = {
   scope: '/'
 };
 
+export const DISTRICTS_BY_STATE = {
+  'Andhra Pradesh': ['Anantapur', 'Chittoor', 'East Godavari', 'Guntur', 'Krishna', 'Kurnool', 'Prakasam', 'Srikakulam', 'Visakhapatnam', 'Vizianagaram', 'West Godavari', 'YSR Kadapa'],
+  'Telangana': ['Adilabad', 'Hyderabad', 'Karimnagar', 'Khammam', 'Mahbubnagar', 'Medak', 'Nalgonda', 'Nizamabad', 'Rangareddy', 'Warangal'],
+};
+
+export const MUNICIPALITIES_BY_DISTRICT = {
+  'West Godavari': ['Bhimavaram', 'Eluru', 'Tadepalligudem', 'Tanuku'],
+  'Krishna': ['Vijayawada', 'Machilipatnam', 'Gudivada'],
+};
+
+export const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+  'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+].sort();
+
 export default {
   APP_CONFIG,
   API_CONFIG,
@@ -299,5 +320,8 @@ export default {
   SUCCESS_MESSAGES,
   ANALYTICS_EVENTS,
   ACHIEVEMENT_TIERS,
-  PWA_CONFIG
+  PWA_CONFIG,
+  DISTRICTS_BY_STATE,
+  MUNICIPALITIES_BY_DISTRICT,
+  INDIAN_STATES
 };
