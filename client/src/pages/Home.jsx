@@ -17,7 +17,7 @@ import {
   Send,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { issuesAPI, leaderboardAPI, feedbackAPI } from "../utils/api";
+import { issuesAPI, feedbackAPI } from "../utils/api";
 import { formatNumber } from "../utils/helpers";
 import toast from "react-hot-toast";
 
@@ -303,7 +303,6 @@ const FeedbackModal = ({ isOpen, onClose, triggerElement }) => {
 const Home = () => {
   const { isAuthenticated } = useAuth();
   const [stats, setStats] = useState(null);
-  const [topContributors, setTopContributors] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
 
   // Feedback modal state
@@ -314,9 +313,6 @@ const Home = () => {
 
   useEffect(() => {
     loadHomeData();
-  }, []);
-
-  useEffect(() => {
     getFeedbacks();
   }, []);
 
@@ -335,13 +331,9 @@ const Home = () => {
 
   const loadHomeData = async () => {
     try {
-      const [statsResponse, leaderboardResponse] = await Promise.all([
-        issuesAPI.getStats(),
-        leaderboardAPI.getMonthly({ limit: 3 }),
-      ]);
-
+      const statsResponse = await issuesAPI.getStats();
+      console.log("Home stats response:", statsResponse.data);
       setStats(statsResponse.data);
-      setTopContributors(leaderboardResponse.data.leaderboard);
     } catch (error) {
       console.error("Error loading home data:", error);
     }
@@ -471,24 +463,19 @@ const Home = () => {
                 <div className="grid grid-cols-3 gap-8 mt-12 pt-12 border-t border-blue-400">
                   <div className="text-center">
                     <div className="text-3xl font-bold text-yellow-300">
-                      {formatNumber(stats.totalIssues)}
+                      {formatNumber(stats.data.overview.total)}
                     </div>
                     <div className="text-blue-200 text-sm">Issues Reported</div>
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold text-yellow-300">
-                      {formatNumber(stats.resolvedIssues)}
+                      {formatNumber(stats.data.overview.resolved)}
                     </div>
                     <div className="text-blue-200 text-sm">Issues Resolved</div>
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold text-yellow-300">
-                      {stats.totalIssues
-                        ? Math.round(
-                            (stats.resolvedIssues / stats.totalIssues) * 100
-                          )
-                        : 0}
-                      %
+                      {stats.data.overview.resolutionRate}%
                     </div>
                     <div className="text-blue-200 text-sm">Success Rate</div>
                   </div>
@@ -586,103 +573,45 @@ const Home = () => {
               ))}
             </div>
 
-            <div className="relative">
-              <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-8">
-                <div className="bg-white rounded-xl p-6 shadow-lg">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-semibold text-gray-900">
-                      Road Pothole Report
-                    </h4>
-                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                      Resolved
-                    </span>
-                  </div>
-                  <div className="bg-gray-100 rounded-lg h-32 mb-4 flex items-center justify-center">
-                    <Camera className="w-8 h-8 text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Large pothole causing traffic issues on Main Street...
-                  </p>
-                  <div className="flex items-center text-xs text-gray-500">
-                    <MapPin className="w-3 h-3 mr-1" />
-                    Main Street, Bhimavaram
+            {stats && (
+              <div className="relative">
+                <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl p-8">
+                  <div className="bg-white rounded-xl p-6 shadow-lg">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-gray-900">
+                        {stats.data.latestIssue.title}
+                      </h4>
+                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                        {stats.data.latestIssue.status}
+                      </span>
+                    </div>
+                    <div className="bg-gray-100 rounded-lg h-32 mb-4 flex items-center justify-center">
+                      {stats.data.latestIssue.mediaType === "image" ? (
+                        <img
+                          src={stats.data.latestIssue.mediaUrl}
+                          alt={stats.data.latestIssue.title}
+                          className="object-cover h-32 w-full rounded-lg"
+                        />
+                      ) : (
+                        <Camera className="w-8 h-8 text-gray-400" />
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">
+                      {stats.data.latestIssue.description}
+                    </p>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <MapPin className="w-3 h-3 mr-1" />
+                      {stats.data.latestIssue.location.address}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Top Contributors */}
-      {topContributors?.length > 0 && (
-        <section className="py-20 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                Community Champions
-              </h2>
-              <p className="text-xl text-gray-600">
-                Recognizing our top contributors who are making a difference
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {topContributors.map((contributor, index) => (
-                <div
-                  key={contributor.id}
-                  className="bg-white rounded-xl p-6 text-center shadow-sm border"
-                >
-                  <div className="relative mb-4">
-                    {contributor.avatar ? (
-                      <img
-                        src={contributor.avatar}
-                        alt={contributor.name}
-                        className="w-16 h-16 rounded-full mx-auto object-cover"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 bg-primary-100 rounded-full mx-auto flex items-center justify-center">
-                        <Users className="w-8 h-8 text-primary-600" />
-                      </div>
-                    )}
-                    <div className="absolute -top-2 -right-2">
-                      {index === 0 && (
-                        <Star className="w-6 h-6 text-yellow-500" />
-                      )}
-                      {index === 1 && (
-                        <Star className="w-6 h-6 text-gray-400" />
-                      )}
-                      {index === 2 && (
-                        <Star className="w-6 h-6 text-amber-600" />
-                      )}
-                    </div>
-                  </div>
-
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {contributor.name}
-                  </h3>
-                  <div className="text-2xl font-bold text-primary-600 mb-1">
-                    {formatNumber(contributor.points)}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {contributor.issueCount} issues reported
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="text-center mt-8">
-              <a
-                href="/leaderboard"
-                className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium"
-              >
-                View Full Leaderboard
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </a>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* ...existing code... */}
 
       {/* Testimonials */}
       <section className="py-20">

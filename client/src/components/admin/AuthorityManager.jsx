@@ -367,32 +367,34 @@ const AuthorityManager = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Search */}
               <div className="lg:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <Search className="w-4 h-4 mr-1.5 text-blue-600" />
                   Search Authorities
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
                     placeholder="Search by name..."
                     value={filters.searchQuery}
                     onChange={(e) => handleFilterChange('searchQuery', e.target.value)}
-                    className="pl-10 form-input w-full text-black"
+                    className="pl-10 form-input w-full text-black border-2 border-gray-200 rounded-lg hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                   />
                 </div>
               </div>
 
               {/* Jurisdiction Level */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <Layers className="w-4 h-4 mr-1.5 text-blue-600" />
                   Jurisdiction Level
                 </label>
                 <select
                   value={filters.jurisdictionLevel}
                   onChange={(e) => handleFilterChange('jurisdictionLevel', e.target.value)}
-                  className="form-select w-full text-black"
+                  className="form-select w-full text-black border-2 border-gray-200 rounded-lg hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
                 >
-                  <option value="">All Levels</option>
+                  <option value="">🌍 All Levels</option>
                   <option value="state">🌐 State Level</option>
                   <option value="district">🏛️ District Level</option>
                   <option value="municipality">🏙️ Municipality Level</option>
@@ -401,15 +403,16 @@ const AuthorityManager = () => {
 
               {/* Department */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <Building className="w-4 h-4 mr-1.5 text-purple-600" />
                   Department
                 </label>
                 <select
                   value={filters.department}
                   onChange={(e) => handleFilterChange('department', e.target.value)}
-                  className="form-select w-full text-black"
+                  className="form-select w-full text-black border-2 border-gray-200 rounded-lg hover:border-purple-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all"
                 >
-                  <option value="">All Departments</option>
+                  <option value="">📋 All Departments</option>
                   {ISSUE_CATEGORIES?.map(cat => (
                     <option key={cat.value} value={cat.value}>
                       {cat.icon} {cat.label}
@@ -420,15 +423,16 @@ const AuthorityManager = () => {
 
               {/* State */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <MapPin className="w-4 h-4 mr-1.5 text-green-600" />
                   State/UT
                 </label>
                 <select
                   value={filters.state}
                   onChange={(e) => handleFilterChange('state', e.target.value)}
-                  className="form-select w-full text-black"
+                  className="form-select w-full text-black border-2 border-gray-200 rounded-lg hover:border-green-400 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                 >
-                  <option value="">All States</option>
+                  <option value="">🇮🇳 All States</option>
                   {INDIAN_STATES.map(state => (
                     <option key={state} value={state}>{state}</option>
                   ))}
@@ -437,16 +441,17 @@ const AuthorityManager = () => {
 
               {/* District */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <MapPinned className="w-4 h-4 mr-1.5 text-blue-600" />
                   District
                 </label>
                 <select
                   value={filters.district}
                   onChange={(e) => handleFilterChange('district', e.target.value)}
                   disabled={!filters.state || availableDistricts.length === 0}
-                  className="form-select w-full text-black disabled:bg-gray-100"
+                  className="form-select w-full text-black border-2 border-gray-200 rounded-lg hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <option value="">All Districts</option>
+                  <option value="">🏞️ All Districts</option>
                   {availableDistricts.map(district => (
                     <option key={district} value={district}>{district}</option>
                   ))}
@@ -455,16 +460,17 @@ const AuthorityManager = () => {
 
               {/* Municipality */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <Building className="w-4 h-4 mr-1.5 text-purple-600" />
                   Municipality
                 </label>
                 <select
                   value={filters.municipality}
                   onChange={(e) => handleFilterChange('municipality', e.target.value)}
                   disabled={!filters.district || availableMunicipalities.length === 0}
-                  className="form-select w-full text-black disabled:bg-gray-100"
+                  className="form-select w-full text-black border-2 border-gray-200 rounded-lg hover:border-purple-400 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <option value="">All Municipalities</option>
+                  <option value="">🏘️ All Municipalities</option>
                   {availableMunicipalities.map(municipality => (
                     <option key={municipality} value={municipality}>{municipality}</option>
                   ))}
@@ -473,15 +479,16 @@ const AuthorityManager = () => {
 
               {/* Status */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-1.5 text-green-600" />
                   Status
                 </label>
                 <select
                   value={filters.status}
                   onChange={(e) => handleFilterChange('status', e.target.value)}
-                  className="form-select w-full text-black"
+                  className="form-select w-full text-black border-2 border-gray-200 rounded-lg hover:border-green-400 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                 >
-                  <option value="">All Status</option>
+                  <option value="">🔄 All Status</option>
                   <option value="active">✅ Active</option>
                   <option value="inactive">⏸️ Inactive</option>
                 </select>
@@ -490,15 +497,18 @@ const AuthorityManager = () => {
 
             {/* Sorting */}
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center gap-4">
-                <label className="text-sm font-medium text-gray-700">Sort by:</label>
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="text-sm font-semibold text-gray-700 flex items-center">
+                  <TrendingUp className="w-4 h-4 mr-1.5 text-orange-600" />
+                  Sort by:
+                </label>
                 <div className="flex items-center gap-2">
                   <select
                     value={filters.sortBy}
                     onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                    className="form-select text-sm text-black"
+                    className="form-select text-sm text-black border-2 border-gray-200 rounded-lg hover:border-orange-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all"
                   >
-                    <option value="name">Name</option>
+                    <option value="name">📝 Name</option>
                     <option value="rating">⭐ Rating</option>
                     <option value="resolved">✅ Issues Resolved</option>
                     <option value="assignedIssues">📋 Total Assigned</option>
@@ -507,9 +517,9 @@ const AuthorityManager = () => {
                   
                   <button
                     onClick={() => handleFilterChange('sortOrder', filters.sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="btn btn-outline btn-sm flex items-center"
+                    className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-orange-400 hover:bg-orange-50 text-gray-700 hover:text-orange-700 font-medium text-sm transition-all flex items-center gap-2"
                   >
-                    {filters.sortOrder === 'asc' ? '↑' : '↓'}
+                    <span className="text-lg">{filters.sortOrder === 'asc' ? '↑' : '↓'}</span>
                     {filters.sortOrder === 'asc' ? 'Ascending' : 'Descending'}
                   </button>
                 </div>
@@ -545,7 +555,6 @@ const AuthorityManager = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {authorities.map((authority) => {
-              console.log("Rendering authority:", authority);
               const jurisdictionBadge = getJurisdictionBadge(authority);
               const rating = authority.performanceMetrics?.rating || 0;
               const resolved = authority.performanceMetrics?.resolvedIssues || 0;

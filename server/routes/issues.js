@@ -583,6 +583,12 @@ router.get('/stats/overview', async (req, res) => {
     const resolvedIssues = await Issue.countDocuments({ status: 'resolved' });
     const resolutionRate = totalIssues > 0 ? ((resolvedIssues / totalIssues) * 100).toFixed(2) : 0;
 
+    // Fetch the latest reported issue
+    const latestIssue = await Issue.findOne({})
+      .sort({ createdAt: -1 })
+      .populate('reporter', 'name avatar')
+      .lean();
+
     res.json({
       success: true,
       data: {
@@ -594,7 +600,8 @@ router.get('/stats/overview', async (req, res) => {
         statusBreakdown: stats,
         topCategories: categoryStats,
         priorityBreakdown: priorityStats,
-        recentActivity
+        recentActivity,
+        latestIssue
       }
     });
 
