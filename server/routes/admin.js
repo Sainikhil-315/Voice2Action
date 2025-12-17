@@ -6,10 +6,10 @@ const Authority = require('../models/Authority');
 const Contribution = require('../models/Contribution');
 const { protect } = require('../middleware/auth');
 const { adminOnly } = require('../middleware/roleCheck');
-const { 
-  validateIssueStatusUpdate, 
+const {
+  validateIssueStatusUpdate,
   validateBulkOperation,
-  validateAuthorityCreation 
+  validateAuthorityCreation
 } = require('../utils/validators');
 
 const router = express.Router();
@@ -253,7 +253,7 @@ router.put('/issues/:id/status', async (req, res) => {
     if (status === 'rejected') {
       issue.status = 'rejected';
       issue.rejectionReason = rejectionReason;
-      
+
       issue.timeline.push({
         action: 'rejected',
         timestamp: new Date(),
@@ -267,20 +267,20 @@ router.put('/issues/:id/status', async (req, res) => {
       try {
         // Step 1: Extract location from issue
         const { lat, lng } = issue.location.coordinates;
-        
+
         console.log(`\n🔍 Resolving jurisdiction for issue at: ${lat}, ${lng}`);
-        
+
         // Step 2: Reverse geocode to get jurisdiction
         let jurisdiction;
         try {
           jurisdiction = await reverseGeocode(lat, lng);
           console.log('📍 Resolved jurisdiction:', jurisdiction);
-          
+
           // Step 3: Update issue with jurisdiction info
           issue.location.state = jurisdiction.state;
           issue.location.district = jurisdiction.district;
           issue.location.municipality = jurisdiction.municipality;
-          
+
         } catch (geocodeError) {
           console.error('⚠️ Reverse geocoding failed, using issue location data:', geocodeError.message);
           // Fallback: use existing location data if reverse geocoding fails
@@ -290,7 +290,7 @@ router.put('/issues/:id/status', async (req, res) => {
             municipality: issue.location.municipality || null
           };
         }
-        
+
         // Step 4: Find responsible authority using hierarchical lookup
         const suitableAuthority = await Authority.findResponsibleAuthority(
           issue.category,
@@ -298,12 +298,12 @@ router.put('/issues/:id/status', async (req, res) => {
           jurisdiction.district,
           jurisdiction.municipality
         );
-        
+
         if (suitableAuthority) {
           // ✅ AUTO-ASSIGN to appropriate authority
           issue.assignedTo = suitableAuthority._id;
           issue.status = 'assigned';
-          
+
           // Update authority metrics
           await Authority.findByIdAndUpdate(suitableAuthority._id, {
             $inc: { 'performanceMetrics.totalAssignedIssues': 1 },
@@ -321,7 +321,7 @@ router.put('/issues/:id/status', async (req, res) => {
           // Add assignment timeline
           const jurisdictionLevel = suitableAuthority.getJurisdictionLevel();
           const jurisdictionDisplay = suitableAuthority.getJurisdictionDisplay();
-          
+
           issue.timeline.push({
             action: 'assigned',
             timestamp: new Date(),
@@ -345,17 +345,17 @@ router.put('/issues/:id/status', async (req, res) => {
           console.log(`✅ Issue ${issue._id} auto-assigned to ${suitableAuthority.name} (${jurisdictionLevel}-level)`);
           console.log(`   📍 Location: ${jurisdictionDisplay}`);
           console.log(`   🏢 Department: ${issue.category}`);
-          
+
         } else {
           // ⚠️ No authority found - keep as verified
           issue.status = 'verified';
-          
+
           const locationStr = [
             jurisdiction.municipality,
             jurisdiction.district,
             jurisdiction.state
           ].filter(Boolean).join(', ') || 'Unknown location';
-          
+
           issue.timeline.push({
             action: 'verified',
             timestamp: new Date(),
@@ -368,13 +368,13 @@ router.put('/issues/:id/status', async (req, res) => {
           console.warn(`   Location: ${locationStr}`);
           console.warn(`   Issue will remain VERIFIED until authority is created`);
         }
-        
+
       } catch (assignError) {
         console.error('❌ Auto-assignment error:', assignError);
-        
+
         // Fallback: Keep as verified if auto-assignment fails
         issue.status = 'verified';
-        
+
         issue.timeline.push({
           action: 'verified',
           timestamp: new Date(),
@@ -388,14 +388,14 @@ router.put('/issues/:id/status', async (req, res) => {
     else if (status === 'assigned' && assignedTo) {
       issue.status = 'assigned';
       issue.assignedTo = assignedTo;
-      
+
       await Authority.findByIdAndUpdate(assignedTo, {
         $inc: { 'performanceMetrics.totalAssignedIssues': 1 },
         lastUpdated: new Date()
       });
 
       const authority = await Authority.findById(assignedTo);
-      
+
       issue.timeline.push({
         action: 'assigned',
         timestamp: new Date(),
@@ -421,7 +421,7 @@ router.put('/issues/:id/status', async (req, res) => {
     // Handle other status changes
     else {
       issue.status = status;
-      
+
       issue.timeline.push({
         action: status,
         timestamp: new Date(),
@@ -548,7 +548,7 @@ router.post('/issues/bulk', async (req, res) => {
     for (const issueId of issueIds) {
       try {
         const issue = await Issue.findById(issueId);
-        
+
         if (!issue) {
           results.failed.push({
             issueId,
@@ -589,11 +589,11 @@ router.post('/issues/bulk', async (req, res) => {
           await issue.save();
         }
 
-        results.successful.push({ 
-          issueId, 
-          action, 
-          oldStatus, 
-          newStatus: issue.status 
+        results.successful.push({
+          issueId,
+          action,
+          oldStatus,
+          newStatus: issue.status
         });
 
         // Send notifications (in background)
@@ -602,10 +602,10 @@ router.post('/issues/bulk', async (req, res) => {
           setImmediate(async () => {
             try {
               await notificationService.notifyIssueStatusChange(
-                issue, 
-                oldStatus, 
-                issue.status, 
-                req.user, 
+                issue,
+                oldStatus,
+                issue.status,
+                req.user,
                 reason
               );
             } catch (notifError) {
@@ -713,7 +713,8 @@ router.get('/analytics', async (req, res) => {
     // Aggregate new users per day
     const newUsersAgg = await User.aggregate([
       { $match: { createdAt: { $gte: startDate } } },
-      { $group: {
+      {
+        $group: {
           _id: {
             year: { $year: '$createdAt' },
             month: { $month: '$createdAt' },
@@ -727,7 +728,8 @@ router.get('/analytics', async (req, res) => {
     // Aggregate active users per day (users who reported at least one issue)
     const activeUsersAgg = await Issue.aggregate([
       { $match: { createdAt: { $gte: startDate } } },
-      { $group: {
+      {
+        $group: {
           _id: {
             year: { $year: '$createdAt' },
             month: { $month: '$createdAt' },
@@ -736,7 +738,8 @@ router.get('/analytics', async (req, res) => {
           }
         }
       },
-      { $group: {
+      {
+        $group: {
           _id: {
             year: '$_id.year',
             month: '$_id.month',
@@ -771,7 +774,7 @@ router.get('/analytics', async (req, res) => {
           _id: '$category',
           total: { $sum: 1 },
           resolved: { $sum: { $cond: [{ $eq: ['$status', 'resolved'] }, 1, 0] } },
-          avgResolutionTime: { 
+          avgResolutionTime: {
             $avg: {
               $cond: [
                 { $and: [{ $eq: ['$status', 'resolved'] }, { $ne: ['$actualResolutionTime', null] }] },
@@ -810,7 +813,7 @@ router.get('/analytics', async (req, res) => {
         $group: {
           _id: null,
           totalUsers: { $sum: 1 },
-          activeUsers: { 
+          activeUsers: {
             $sum: {
               $cond: [{ $gt: ['$stats.totalIssuesReported', 0] }, 1, 0]
             }
@@ -873,28 +876,54 @@ router.get('/analytics', async (req, res) => {
 async function reverseGeocode(lat, lng) {
   try {
     const fetch = require('node-fetch');
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
-    
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=14&addressdetails=1`;
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Voice2Action/1.0'
       }
     });
-    
+
     const data = await response.json();
-    
+
     if (!data || !data.address) {
       throw new Error('No address found');
     }
-    
-    // Extract jurisdiction from OSM data
+
+    // Extract jurisdiction with better municipality detection
+    const address = data.address;
+
+    // Try multiple fields for municipality
+    const municipality =
+      address.city ||
+      address.town ||
+      address.municipality ||
+      address.village ||
+      null;
+
+    // Try multiple fields for district
+    const district =
+      address.county ||
+      address.district ||
+      address.state_district ||
+      null;
+
+    const state = address.state || null;
+
+    console.log('🗺️  Nominatim Response:', {
+      municipality,
+      district,
+      state,
+      raw: address
+    });
+
     return {
-      state: data.address.state || null,
-      district: data.address.county || data.address.district || null,
-      municipality: data.address.city || data.address.town || data.address.village || null,
+      state,
+      district,
+      municipality,
       fullAddress: data.display_name
     };
-    
+
   } catch (error) {
     console.error('Reverse geocoding error:', error);
     throw new Error(`Failed to resolve location: ${error.message}`);
