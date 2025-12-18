@@ -205,7 +205,15 @@ export const authAPI = {
   }),
   changePassword: (data) => api.put('/auth/change-password', data),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
-  resetPassword: (token, password) => api.post(`/auth/reset-password/${token}`, { password })
+  resetPassword: (token, password) => api.post(`/auth/reset-password/${token}`, { password }),
+  
+  // Two-Factor Authentication methods
+  setup2FA: () => api.post('/auth/2fa/setup'),
+  verify2FA: (data) => api.post('/auth/2fa/verify', data),
+  disable2FA: () => api.post('/auth/2fa/disable'),
+  get2FABackupCodes: () => api.get('/auth/2fa/backup-codes'),
+  regenerateBackupCodes: () => api.post('/auth/2fa/regenerate-backup-codes'),
+  verify2FALogin: (data) => api.post('/auth/2fa/verify-login', data)
 };
 
 // Notification API

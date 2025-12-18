@@ -1,4 +1,4 @@
-// models/User.js
+// server/models/User.js - Updated with 2FA fields
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -80,6 +80,32 @@ const userSchema = new mongoose.Schema({
       type: Number,
       default: 0
     }
+  },
+  // Two-Factor Authentication fields
+  twoFactorEnabled: {
+    type: Boolean,
+    default: false
+  },
+  twoFactorSecret: {
+    type: String,
+    select: false // Don't include in queries by default
+  },
+  twoFactorTempSecret: {
+    type: String,
+    select: false // Temporary secret during setup
+  },
+  twoFactorBackupCodes: [{
+    type: String,
+    select: false // Hashed backup codes
+  }],
+  // Password reset fields
+  passwordResetToken: {
+    type: String,
+    select: false
+  },
+  passwordResetExpires: {
+    type: Date,
+    select: false
   },
   isVerified: {
     type: Boolean,

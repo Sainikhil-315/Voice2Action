@@ -28,6 +28,11 @@ const IssueVerification = () => {
   const [showModal, setShowModal] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   
+  // Rejection modal states
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const [rejectingIssue, setRejectingIssue] = useState(null)
+  const [rejectionReason, setRejectionReason] = useState('')
+  
   // Search and filter states
   const [searchInput, setSearchInput] = useState('')
   const [filters, setFilters] = useState({
@@ -78,7 +83,6 @@ const IssueVerification = () => {
       let response
 
       if (filters.search) {
-        // Use search endpoint for text queries
         const searchParams = {
           q: filters.search.trim(),
           page: pagination.page,
@@ -87,12 +91,10 @@ const IssueVerification = () => {
         
         response = await issuesAPI.search(searchParams)
         
-        // Filter to only show pending issues from search results
         const pendingIssues = response.data.data.issues.filter(issue => 
           issue.status === 'pending'
         )
         
-        // Apply additional filters to search results
         let filteredIssues = pendingIssues
         
         if (filters.category) {
@@ -113,7 +115,6 @@ const IssueVerification = () => {
           total: filteredIssues.length
         }))
       } else {
-        // Use regular pending issues endpoint
         const cleanFilters = Object.fromEntries(
           Object.entries(filters).filter(([key, value]) => key !== 'search' && value !== '')
         )
@@ -166,17 +167,40 @@ const IssueVerification = () => {
     }
   }
 
-  const handleRejectIssue = async (issueId, reason) => {
+  const openRejectModal = (issue) => {
+    setRejectingIssue(issue)
+    setRejectionReason('')
+    setShowRejectModal(true)
+  }
+
+  const closeRejectModal = () => {
+    setShowRejectModal(false)
+    setRejectingIssue(null)
+    setRejectionReason('')
+  }
+
+  const handleRejectIssue = async () => {
+    if (!rejectionReason.trim()) {
+      toast.error('Please provide a reason for rejection')
+      return
+    }
+
+    if (rejectionReason.trim().length < 10) {
+      toast.error('Rejection reason must be at least 10 characters')
+      return
+    }
+
     setActionLoading(true)
     try {
-      await adminAPI.updateIssueStatus(issueId, {
+      await adminAPI.updateIssueStatus(rejectingIssue._id, {
         status: 'rejected',
-        adminNotes: reason,
-        rejectionReason: reason
+        adminNotes: rejectionReason.trim(),
+        rejectionReason: rejectionReason.trim()
       })
       
       toast.success('Issue rejected')
-      setIssues(prev => prev.filter(issue => issue._id !== issueId))
+      setIssues(prev => prev.filter(issue => issue._id !== rejectingIssue._id))
+      closeRejectModal()
       setShowModal(false)
       setSelectedIssue(null)
     } catch (error) {
@@ -247,11 +271,6 @@ const IssueVerification = () => {
                   className="pl-10 form-input w-full text-black"
                 />
               </div>
-              {/* {searchInput.length > 0 && searchInput.length < 2 && (
-                <p className="text-xs text-red-500 mt-1">
-                  Search requires at least 2 characters
-                </p>
-              )} */}
             </div>
             
             <select
@@ -403,7 +422,7 @@ const IssueVerification = () => {
                       
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => handleRejectIssue(issue._id, 'Does not meet community guidelines')}
+                          onClick={() => openRejectModal(issue)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Reject Issue"
                         >
@@ -424,7 +443,7 @@ const IssueVerification = () => {
               })}
             </div>
             
-            {/* Pagination - Only show if not searching or search has many results */}
+            {/* Pagination */}
             {pagination.total > pagination.limit && !filters.search && (
               <div className="mt-8 flex items-center justify-between">
                 <div className="text-sm text-gray-500">
@@ -456,6 +475,84 @@ const IssueVerification = () => {
         )}
       </div>
 
+      {/* Rejection Modal */}
+      {showRejectModal && rejectingIssue && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeRejectModal} />
+            
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              {/* Modal Header */}
+              <div className="bg-white px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-red-100">
+                      <X className="h-6 w-6 text-red-600" />
+                    </div>
+                    <h3 className="ml-3 text-lg font-medium text-gray-900">
+                      Reject Issue
+                    </h3>
+                  </div>
+                  <button onClick={closeRejectModal} className="text-gray-400 hover:text-gray-500">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="bg-white px-6 py-5">
+                <div className="mb-4">
+                  <p className="text-sm text-gray-700 mb-2">
+                    <span className="font-medium">Issue:</span> {rejectingIssue.title}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Please provide a clear reason for rejecting this issue. This will be sent to the reporter.
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="rejection-reason" className="block text-sm font-medium text-gray-700 mb-2">
+                    Rejection Reason <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="rejection-reason"
+                    rows={4}
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    className="form-textarea w-full text-black"
+                    placeholder="E.g., This issue does not meet our community guidelines because..."
+                    autoFocus
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Minimum 10 characters required
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse gap-3">
+                <LoadingButton
+                  loading={actionLoading}
+                  onClick={handleRejectIssue}
+                  className="btn btn-danger w-full sm:w-auto"
+                  disabled={!rejectionReason.trim() || rejectionReason.trim().length < 10}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Reject Issue
+                </LoadingButton>
+                <button
+                  onClick={closeRejectModal}
+                  className="btn btn-outline w-full sm:w-auto mt-3 sm:mt-0"
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Issue Detail Modal */}
       {showModal && selectedIssue && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -480,7 +577,7 @@ const IssueVerification = () => {
                 <IssueDetailView 
                   issue={selectedIssue} 
                   onApprove={handleApproveIssue}
-                  onReject={handleRejectIssue}
+                  onReject={openRejectModal}
                   loading={actionLoading}
                 />
               </div>
@@ -494,17 +591,7 @@ const IssueVerification = () => {
 
 // Issue Detail View Component
 const IssueDetailView = ({ issue, onApprove, onReject, loading }) => {
-  const [rejectionReason, setRejectionReason] = useState('')
-  const [showRejectForm, setShowRejectForm] = useState(false)
   const category = getCategoryInfo(issue.category)
-
-  const handleReject = () => {
-    if (!rejectionReason.trim()) {
-      toast.error('Please provide a rejection reason')
-      return
-    }
-    onReject(issue._id, rejectionReason)
-  }
 
   return (
     <div className="space-y-6">
@@ -604,63 +691,25 @@ const IssueDetailView = ({ issue, onApprove, onReject, loading }) => {
 
       {/* Actions */}
       <div className="border-t pt-6">
-        {!showRejectForm ? (
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={() => setShowRejectForm(true)}
-              className="btn btn-outline text-red-600 border-red-600 hover:bg-red-50"
-              disabled={loading}
-            >
-              <X className="w-4 h-4 mr-2" />
-              Reject Issue
-            </button>
-            
-            <LoadingButton
-              loading={loading}
-              onClick={() => onApprove(issue._id)}
-              className="btn btn-primary"
-            >
-              <Check className="w-4 h-4 mr-2" />
-              Approve Issue
-            </LoadingButton>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Rejection Reason *
-              </label>
-              <textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                rows={3}
-                className="form-textarea w-full"
-                placeholder="Please provide a reason for rejecting this issue..."
-              />
-            </div>
-            
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowRejectForm(false)
-                  setRejectionReason('')
-                }}
-                className="btn btn-outline"
-                disabled={loading}
-              >
-                Cancel
-              </button>
-              
-              <LoadingButton
-                loading={loading}
-                onClick={handleReject}
-                className="btn btn-danger"
-              >
-                Reject Issue
-              </LoadingButton>
-            </div>
-          </div>
-        )}
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={() => onReject(issue)}
+            className="btn btn-outline text-red-600 border-red-600 hover:bg-red-50"
+            disabled={loading}
+          >
+            <X className="w-4 h-4 mr-2" />
+            Reject Issue
+          </button>
+          
+          <LoadingButton
+            loading={loading}
+            onClick={() => onApprove(issue._id)}
+            className="btn btn-primary"
+          >
+            <Check className="w-4 h-4 mr-2" />
+            Approve Issue
+          </LoadingButton>
+        </div>
       </div>
     </div>
   )

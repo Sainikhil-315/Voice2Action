@@ -18,7 +18,13 @@ import {
   Target,
   CheckCircle,
   Award,
-  Star
+  Star,
+  Shield, 
+  Smartphone, 
+  Key, 
+  AlertCircle,
+  Copy, 
+  RefreshCw
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { leaderboardAPI, issuesAPI } from '../utils/api'
@@ -29,6 +35,7 @@ import { formatNumber, formatRelativeTime } from '../utils/helpers'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
+import { authAPI } from '../utils/api';
 
 const Profile = () => {
   const { user, updateProfile, updateAvatar, changePassword } = useAuth()
@@ -792,62 +799,237 @@ const SettingsTab = () => {
 
 // Security Tab Component
 const SecurityTab = () => {
-  const { changePassword } = useAuth();
+  const { user, changePassword, updateProfile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [twoFactorSetup, setTwoFactorSetup] = useState({
+    qrCode: null,
+    secret: null,
+    backupCodes: [],
+    showSetup: false,
+    verifying: false
+  });
 
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    watch,
+    register: registerPassword,
+    handleSubmit: handlePasswordSubmit,
+    formState: { errors: passwordErrors },
+    reset: resetPasswordForm,
+    watch
+  } = useForm();
+
+  const {
+    register: register2FA,
+    handleSubmit: handle2FASubmit,
+    formState: { errors: twoFAErrors },
+    reset: reset2FAForm
   } = useForm();
 
   const newPassword = watch("newPassword");
 
-  const onSubmit = async (data) => {
+  // Load 2FA status on component mount
+  useEffect(() => {
+    if (user?.twoFactorEnabled) {
+      loadBackupCodes();
+    }
+  }, [user]);
+
+  const loadBackupCodes = async () => {
+    try {
+      const response = await authAPI.get2FABackupCodes();
+      if (response.data.success) {
+        setTwoFactorSetup(prev => ({
+          ...prev,
+          backupCodes: response.data.data.backupCodes
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load backup codes:', error);
+    }
+  };
+
+  // Password Change Handler
+  const onPasswordSubmit = async (data) => {
     setLoading(true);
     try {
-      await changePassword({
+      const result = await changePassword({
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
       });
-      reset();
+      
+      if (result.success) {
+        resetPasswordForm();
+        toast.success('Password changed successfully!');
+      }
     } catch (error) {
-      console.error("Password change failed:", error);
+      console.error('Password change failed:', error);
+      toast.error(error.response?.data?.message || 'Failed to change password');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="bg-white rounded-lg shadow-sm border p-8">
-      <h3 className="text-xl font-bold text-gray-900 mb-6">Change Password</h3>
+  // Setup 2FA - Request QR Code
+  const handleSetup2FA = async () => {
+    setLoading(true);
+    try {
+      const response = await authAPI.setup2FA();
+      
+      if (response.data.success) {
+        setTwoFactorSetup({
+          qrCode: response.data.data.qrCode,
+          secret: response.data.data.secret,
+          backupCodes: [],
+          showSetup: true,
+          verifying: false
+        });
+        toast.success('Scan QR code with your authenticator app');
+      }
+    } catch (error) {
+      console.error('2FA setup failed:', error);
+      toast.error('Failed to setup 2FA');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-md">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Current Password *
-          </label>
-          <input
-            {...register("currentPassword", {
-              required: "Current password is required",
-            })}
-            type="password"
-            className="form-input w-full"
-          />
-          {errors.currentPassword && (
-            <p className="text-red-600 text-sm mt-1">
-              {errors.currentPassword.message}
-            </p>
-          )}
-          // src/pages/Profile.jsx - SecurityTab Component (continued)
+  // Verify and Enable 2FA
+  const onVerify2FA = async (data) => {
+    setTwoFactorSetup(prev => ({ ...prev, verifying: true }));
+    try {
+      console.log('Sending verification code:', data.verificationCode);
+      
+      const response = await authAPI.verify2FA({
+        token: data.verificationCode.trim()
+      });
+      
+      console.log('2FA verification response:', response);
+      
+      if (response.data.success) {
+        // Update user profile with 2FA enabled
+        await updateProfile({ twoFactorEnabled: true });
+        
+        setTwoFactorSetup({
+          qrCode: null,
+          secret: null,
+          backupCodes: response.data.data.backupCodes,
+          showSetup: false,
+          verifying: false
+        });
+        
+        toast.success('Two-Factor Authentication enabled successfully!');
+        reset2FAForm();
+      }
+    } catch (error) {
+      console.error('2FA verification failed:', error);
+      console.error('Error response:', error.response?.data);
+      
+      const errorMessage = error.response?.data?.message || 'Invalid verification code. Please try again.';
+      toast.error(errorMessage);
+    } finally {
+      setTwoFactorSetup(prev => ({ ...prev, verifying: false }));
+    }
+  };
+
+  // Disable 2FA
+  const handleDisable2FA = async () => {
+    if (!window.confirm('Are you sure you want to disable Two-Factor Authentication? This will make your account less secure.')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await authAPI.disable2FA();
+      
+      if (response.data.success) {
+        await updateProfile({ twoFactorEnabled: false });
+        setTwoFactorSetup({
+          qrCode: null,
+          secret: null,
+          backupCodes: [],
+          showSetup: false,
+          verifying: false
+        });
+        toast.success('Two-Factor Authentication disabled');
+      }
+    } catch (error) {
+      console.error('Failed to disable 2FA:', error);
+      toast.error('Failed to disable 2FA');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Regenerate Backup Codes
+  const handleRegenerateBackupCodes = async () => {
+    if (!window.confirm('This will invalidate your current backup codes. Make sure to save the new ones. Continue?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await authAPI.regenerateBackupCodes();
+      
+      if (response.data.success) {
+        setTwoFactorSetup(prev => ({
+          ...prev,
+          backupCodes: response.data.data.backupCodes
+        }));
+        toast.success('Backup codes regenerated successfully');
+      }
+    } catch (error) {
+      console.error('Failed to regenerate backup codes:', error);
+      toast.error('Failed to regenerate backup codes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Copy Secret to Clipboard
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied to clipboard`);
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Password Change Section */}
+      <div className="bg-white rounded-lg shadow-sm border p-8">
+        <div className="flex items-center mb-6">
+          <div className="p-2 bg-blue-100 rounded-lg mr-3">
+            <Lock className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Change Password</h3>
+            <p className="text-sm text-gray-600">Update your password regularly to keep your account secure</p>
+          </div>
+        </div>
+
+        <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-6 max-w-md">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Current Password *
+            </label>
+            <input
+              {...registerPassword("currentPassword", {
+                required: "Current password is required",
+              })}
+              type="password"
+              className="form-input w-full text-black"
+              placeholder="Enter current password"
+            />
+            {passwordErrors.currentPassword && (
+              <p className="text-red-600 text-sm mt-1">
+                {passwordErrors.currentPassword.message}
+              </p>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               New Password *
             </label>
             <input
-              {...register("newPassword", {
+              {...registerPassword("newPassword", {
                 required: "New password is required",
                 minLength: {
                   value: 8,
@@ -855,78 +1037,277 @@ const SecurityTab = () => {
                 },
                 pattern: {
                   value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                  message:
-                    "Password must contain uppercase, lowercase, and number",
+                  message: "Password must contain uppercase, lowercase, and number",
                 },
               })}
               type="password"
-              className="form-input w-full"
+              className="form-input w-full text-black"
+              placeholder="Enter new password"
             />
-            {errors.newPassword && (
+            {passwordErrors.newPassword && (
               <p className="text-red-600 text-sm mt-1">
-                {errors.newPassword.message}
+                {passwordErrors.newPassword.message}
               </p>
             )}
+            <p className="text-xs text-gray-500 mt-1">
+              Must be at least 8 characters with uppercase, lowercase, and numbers
+            </p>
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Confirm New Password *
             </label>
             <input
-              {...register("confirmPassword", {
+              {...registerPassword("confirmPassword", {
                 required: "Please confirm your password",
                 validate: (value) =>
                   value === newPassword || "Passwords do not match",
               })}
               type="password"
-              className="form-input w-full"
+              className="form-input w-full text-black"
+              placeholder="Confirm new password"
             />
-            {errors.confirmPassword && (
+            {passwordErrors.confirmPassword && (
               <p className="text-red-600 text-sm mt-1">
-                {errors.confirmPassword.message}
+                {passwordErrors.confirmPassword.message}
               </p>
             )}
           </div>
-          <div>
-            <LoadingButton
-              loading={loading}
-              type="submit"
-              className="btn btn-primary"
-            >
-              Update Password
-            </LoadingButton>
-          </div>
-        </div>
-      </form>
 
-      {/* Two-Factor Authentication */}
-      <div className="mt-12 pt-8 border-t border-gray-200">
-        <h4 className="text-lg font-medium text-gray-900 mb-4">
-          Two-Factor Authentication
-        </h4>
-        <p className="text-gray-600 mb-6">
-          Add an extra layer of security to your account by enabling two-factor
-          authentication.
-        </p>
-
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-gray-900">
-                Two-Factor Authentication
-              </p>
-              <p className="text-sm text-gray-600">Currently disabled</p>
-            </div>
-            <button className="btn btn-outline text-sm">Enable 2FA</button>
-          </div>
-        </div>
+          <LoadingButton
+            loading={loading}
+            type="submit"
+            className="btn btn-primary"
+          >
+            Update Password
+          </LoadingButton>
+        </form>
       </div>
 
-      {/* Login Sessions */}
-      <div className="mt-8 pt-8 border-t border-gray-200">
-        <h4 className="text-lg font-medium text-gray-900 mb-4">
-          Active Sessions
-        </h4>
+      {/* Two-Factor Authentication Section */}
+      <div className="bg-white rounded-lg shadow-sm border p-8">
+        <div className="flex items-center mb-6">
+          <div className="p-2 bg-green-100 rounded-lg mr-3">
+            <Shield className="w-5 h-5 text-green-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-gray-900">Two-Factor Authentication</h3>
+            <p className="text-sm text-gray-600">Add an extra layer of security to your account</p>
+          </div>
+          {user?.twoFactorEnabled && (
+            <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full flex items-center">
+              <CheckCircle className="w-4 h-4 mr-1" />
+              Enabled
+            </span>
+          )}
+        </div>
+
+        {!user?.twoFactorEnabled && !twoFactorSetup.showSetup && (
+          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <div className="flex items-start">
+              <AlertCircle className="w-5 h-5 text-blue-600 mr-3 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900 mb-2">Secure Your Account</h4>
+                <p className="text-sm text-gray-600 mb-4">
+                  Two-Factor Authentication (2FA) adds an extra layer of security by requiring a verification code from your authenticator app in addition to your password.
+                </p>
+                <ul className="text-sm text-gray-600 space-y-2 mb-4">
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                    Compatible with Google Authenticator, Authy, and other TOTP apps
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                    Backup codes provided for account recovery
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-600 mr-2" />
+                    Protects against unauthorized access
+                  </li>
+                </ul>
+                <LoadingButton
+                  loading={loading}
+                  onClick={handleSetup2FA}
+                  className="btn btn-primary"
+                >
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Enable Two-Factor Authentication
+                </LoadingButton>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 2FA Setup Flow */}
+        {twoFactorSetup.showSetup && (
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-6 rounded-lg border">
+              <h4 className="font-medium text-gray-900 mb-4 flex items-center">
+                <span className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">1</span>
+                Scan QR Code
+              </h4>
+              
+              <div className="bg-white p-4 rounded-lg border inline-block">
+                {twoFactorSetup.qrCode && (
+                  <img src={twoFactorSetup.qrCode} alt="2FA QR Code" className="w-48 h-48" />
+                )}
+              </div>
+              
+              <p className="text-sm text-gray-600 mt-4">
+                Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+              </p>
+              
+              {twoFactorSetup.secret && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Can't scan? Enter this code manually:</p>
+                  <div className="flex items-center space-x-2">
+                    <code className="px-3 py-2 bg-gray-100 rounded text-sm font-mono flex-1">
+                      {twoFactorSetup.secret}
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(twoFactorSetup.secret, 'Secret key')}
+                      className="btn btn-outline p-2"
+                      title="Copy secret key"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 p-6 rounded-lg border">
+              <h4 className="font-medium text-gray-900 mb-4 flex items-center">
+                <span className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center mr-3 text-sm">2</span>
+                Verify Setup
+              </h4>
+              
+              <form onSubmit={handle2FASubmit(onVerify2FA)} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Enter 6-digit code from your authenticator app
+                  </label>
+                  <input
+                    {...register2FA("verificationCode", {
+                      required: "Verification code is required",
+                      pattern: {
+                        value: /^[0-9]{6}$/,
+                        message: "Code must be 6 digits"
+                      }
+                    })}
+                    type="text"
+                    maxLength="6"
+                    className="form-input w-full max-w-xs text-center text-2xl tracking-widest font-mono text-black"
+                    placeholder="000000"
+                    autoComplete="off"
+                  />
+                  {twoFAErrors.verificationCode && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {twoFAErrors.verificationCode.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex space-x-3">
+                  <LoadingButton
+                    loading={twoFactorSetup.verifying}
+                    type="submit"
+                    className="btn btn-primary"
+                  >
+                    Verify and Enable
+                  </LoadingButton>
+                  <button
+                    type="button"
+                    onClick={() => setTwoFactorSetup({ ...twoFactorSetup, showSetup: false })}
+                    className="btn btn-outline"
+                    disabled={twoFactorSetup.verifying}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 2FA Enabled - Show Management Options */}
+        {user?.twoFactorEnabled && !twoFactorSetup.showSetup && (
+          <div className="space-y-6">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="flex items-center text-green-800">
+                <CheckCircle className="w-5 h-5 mr-2" />
+                <span className="font-medium">Two-Factor Authentication is active</span>
+              </div>
+              <p className="text-sm text-green-700 mt-1">
+                Your account is protected with an additional security layer
+              </p>
+            </div>
+
+            {/* Backup Codes */}
+            {twoFactorSetup.backupCodes.length > 0 && (
+              <div className="bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+                <div className="flex items-start mb-4">
+                  <Key className="w-5 h-5 text-yellow-600 mr-3 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900 mb-2">Backup Recovery Codes</h4>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Save these codes in a secure place. Each code can be used once if you lose access to your authenticator app.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  {twoFactorSetup.backupCodes.map((code, index) => (
+                    <div key={index} className="bg-white p-3 rounded border font-mono text-sm text-center">
+                      {code}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      const codesText = twoFactorSetup.backupCodes.join('\n');
+                      copyToClipboard(codesText, 'Backup codes');
+                    }}
+                    className="btn btn-outline text-sm"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy All Codes
+                  </button>
+                  <LoadingButton
+                    loading={loading}
+                    onClick={handleRegenerateBackupCodes}
+                    className="btn btn-outline text-sm"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Regenerate Codes
+                  </LoadingButton>
+                </div>
+              </div>
+            )}
+
+            {/* Disable 2FA */}
+            <div className="pt-6 border-t">
+              <LoadingButton
+                loading={loading}
+                onClick={handleDisable2FA}
+                className="btn btn-danger"
+              >
+                Disable Two-Factor Authentication
+              </LoadingButton>
+              <p className="text-sm text-gray-500 mt-2">
+                This will make your account less secure. Not recommended.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Active Sessions (Existing) */}
+      <div className="bg-white rounded-lg shadow-sm border p-8">
+        <h4 className="text-lg font-medium text-gray-900 mb-4">Active Sessions</h4>
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
             <div>
@@ -937,17 +1318,6 @@ const SecurityTab = () => {
             <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
               Active
             </span>
-          </div>
-
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div>
-              <p className="font-medium text-gray-900">Mobile App</p>
-              <p className="text-sm text-gray-600">Android • India</p>
-              <p className="text-xs text-gray-500">Last active: 2 hours ago</p>
-            </div>
-            <button className="text-red-600 hover:text-red-700 text-sm font-medium">
-              Revoke
-            </button>
           </div>
         </div>
       </div>
