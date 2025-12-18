@@ -113,7 +113,6 @@ const AuthorityDashboard = ({ authority, token, onLogout }) => {
     window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
     const fetchIssues = async () => {
       setLoading(true);
-      console.log("Loading issues for authority:", authority.id);
       try {
         const response = await authoritiesAPI.getAssignedIssues(
           authority.id,

@@ -311,7 +311,6 @@ const IssueTracking = () => {
               No issues found
             </h3>
             <p className="text-gray-600 mb-6">
-              {console.log(filters)}
               {!Object.values(filters).some((f) => f)
                 ? "Try adjusting your search filters"
                 : "Be the first to report an issue in your community"}

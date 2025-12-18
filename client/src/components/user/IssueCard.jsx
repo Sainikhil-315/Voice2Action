@@ -64,7 +64,6 @@ const IssueCard = ({ issue, compact = false, showActions = true }) => {
   const handleUpvote = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log("Upvote issue:", issue._id);
   };
 
   const handleViewIssue = () => {
@@ -115,7 +114,6 @@ const IssueCard = ({ issue, compact = false, showActions = true }) => {
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden h-full flex flex-col">
-      {console.log(issue)}
       {/* Header */}
       <div className="p-4 sm:p-6 flex-shrink-0">
         <div className="flex items-start justify-between gap-3">

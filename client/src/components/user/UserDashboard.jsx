@@ -236,7 +236,6 @@ const UserDashboard = () => {
               <div className="px-6 py-4 border-b border-gray-200">
                 <h2 className="text-lg font-medium text-gray-900">Community Impact</h2>
               </div>
-              {console.log(stats)}
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center">

@@ -153,7 +153,6 @@ const IssueVerification = () => {
       if (assignToAuthority && typeof assignToAuthority === 'string' && assignToAuthority.trim() !== '') {
         payload.assignedTo = assignToAuthority
       }
-      console.log("payload in Issue verification: ", payload)
       await adminAPI.updateIssueStatus(issueId, payload)
       toast.success('Issue approved successfully')
       setIssues(prev => prev.filter(issue => issue._id !== issueId))

@@ -332,7 +332,6 @@ const Home = () => {
   const loadHomeData = async () => {
     try {
       const statsResponse = await issuesAPI.getStats();
-      console.log("Home stats response:", statsResponse.data);
       setStats(statsResponse.data);
     } catch (error) {
       console.error("Error loading home data:", error);
@@ -586,9 +585,9 @@ const Home = () => {
                       </span>
                     </div>
                     <div className="bg-gray-100 rounded-lg h-32 mb-4 flex items-center justify-center">
-                      {stats.data.latestIssue.mediaType === "image" ? (
+                      {stats.data.latestIssue.media[0].type === "image" ? (
                         <img
-                          src={stats.data.latestIssue.mediaUrl}
+                          src={stats.data.latestIssue.media[0].url}
                           alt={stats.data.latestIssue.title}
                           className="object-cover h-32 w-full rounded-lg"
                         />

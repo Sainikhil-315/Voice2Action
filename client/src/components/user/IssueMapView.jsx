@@ -88,12 +88,10 @@ const IssueMapView = ({ onClose }) => {
       };
 
       const response = await issuesAPI.getAll(safeFilters);
-      console.log("API response:", response.data);
       // Based on your sample response structure: response.data.data.issues
       const issuesWithLocation = response.data.data.issues.filter(
         (issue) => issue.location?.coordinates.lat && issue.location?.coordinates.lng
-      );
-      console.log("Loaded issues with location:", issuesWithLocation);
+        );
       setIssues(issuesWithLocation);
 
       if (issuesWithLocation.length > 0) {
@@ -103,7 +101,6 @@ const IssueMapView = ({ onClose }) => {
         const avgLng =
           issuesWithLocation.reduce((sum, i) => sum + i.location.coordinates.lng, 0) /
           issuesWithLocation.length;
-          console.log("Setting map center to:", [avgLat, avgLng]);
         setMapCenter([avgLat, avgLng]);
       }
     } catch (error) {
@@ -206,7 +203,6 @@ const IssueMapView = ({ onClose }) => {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
             {issues.map((issue) => {
-                console.log("Rendering marker for issue:", issue);
               const categoryInfo = getCategoryInfo(issue.category);
               return (
                 <Marker

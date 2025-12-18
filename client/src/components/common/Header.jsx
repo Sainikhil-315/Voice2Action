@@ -27,15 +27,6 @@ const Header = () => {
   const profileMenuRef = useRef(null);
   const notificationsRef = useRef(null);
 
-  // Debug: Log notifications whenever they change
-  useEffect(() => {
-    console.log('🔍 Header - Notifications updated:', {
-      count: notifications.length,
-      unreadCount,
-      notifications
-    });
-  }, [notifications, unreadCount]);
-
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -209,7 +200,6 @@ const Header = () => {
               <div className="relative notifications-dropdown" ref={notificationsRef}>
                 <button
                   onClick={() => {
-                    console.log('🔔 Notification button clicked. Current count:', notifications.length);
                     setIsNotificationsOpen(!isNotificationsOpen);
                   }}
                   className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-primary-500 rounded-lg transition-colors"
@@ -274,7 +264,6 @@ const Header = () => {
                       <>
                         <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
                           {notifications.map((notification, index) => {
-                            console.log(`📋 Rendering notification ${index}:`, notification);
                             return (
                               <div
                                 key={notification._id}
@@ -299,7 +288,6 @@ const Header = () => {
                                       <button
                                         className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
                                         onClick={() => {
-                                          console.log('✓ Mark as read clicked:', notification._id);
                                           markAsRead(notification._id);
                                         }}
                                       >
@@ -309,7 +297,6 @@ const Header = () => {
                                     <button
                                       className="text-xs text-red-500 hover:underline"
                                       onClick={() => {
-                                        console.log('🗑️ Delete clicked:', notification._id);
                                         deleteNotification(notification._id);
                                       }}
                                     >
@@ -326,7 +313,6 @@ const Header = () => {
                           <button
                             className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={() => {
-                              console.log('✓ Mark all as read clicked');
                               markAllAsRead();
                             }}
                             disabled={unreadCount === 0}

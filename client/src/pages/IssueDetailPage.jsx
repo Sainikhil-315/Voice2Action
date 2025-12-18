@@ -348,7 +348,6 @@ const IssueDetailPage = () => {
       setLoading(true);
       try {
         const res = await issuesAPI.getById(id);
-        console.log("response:", res);
 
         // Handle different response structures
         let issueData;

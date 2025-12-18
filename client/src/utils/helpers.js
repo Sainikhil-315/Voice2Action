@@ -445,9 +445,6 @@ export const trackEvent = (eventName, properties = {}) => {
   if (typeof gtag !== 'undefined') {
     gtag('event', eventName, properties);
   }
-  
-  // You can also send to other analytics services here
-  console.log('Analytics Event:', eventName, properties);
 };
 
 export const trackPageView = (pagePath) => {
@@ -457,7 +454,6 @@ export const trackPageView = (pagePath) => {
     });
   }
   
-  console.log('Page View:', pagePath);
 };
 
 // Error handling utilities
