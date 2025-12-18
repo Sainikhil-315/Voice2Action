@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { useAuth } from './AuthContext';
 import { getNotificationsAPI, markNotificationReadAPI, markAllNotificationsReadAPI, deleteNotificationAPI } from '../utils/api';
 import { useSocket } from './SocketContext';
+import toast from 'react-hot-toast';
 
 const NotificationContext = createContext();
 
@@ -9,64 +10,166 @@ export const useNotifications = () => useContext(NotificationContext);
 
 export const NotificationProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
-  const { socket } = useSocket();
+  const { socket, isConnected } = useSocket();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
   // Fetch notifications from API
   const fetchNotifications = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      console.log('⚠️ Not authenticated, skipping notification fetch');
+      return;
+    }
+    
     setLoading(true);
     try {
-      const res = await getNotificationsAPI();
-      if (res.success) {
-        setNotifications(res.notifications);
-        setUnreadCount(res.notifications.filter(n => !n.read).length);
+      console.log('📥 Fetching notifications from API...');
+      const response = await getNotificationsAPI();
+      console.log('✅ Raw API response:', response);
+      
+      // ✅ CRITICAL FIX: Extract data from Axios response
+      // The response structure is: { data: { success: true, notifications: [...] }, status, ... }
+      const data = response.data;
+      console.log('✅ Extracted data from response.data:', data);
+      
+      if (data && data.success && Array.isArray(data.notifications)) {
+        console.log('📋 Setting notifications:', data.notifications);
+        setNotifications(data.notifications);
+        const unread = data.notifications.filter(n => !n.read).length;
+        setUnreadCount(unread);
+        console.log(`📊 Total: ${data.notifications.length}, Unread: ${unread}`);
+      } else {
+        console.error('⚠️ Unexpected API response format:', data);
+        setNotifications([]);
+        setUnreadCount(0);
       }
+    } catch (error) {
+      console.error('❌ Error fetching notifications:', error);
+      setNotifications([]);
+      setUnreadCount(0);
+      // Don't show toast here - let the API interceptor handle it
     } finally {
       setLoading(false);
     }
   }, [isAuthenticated]);
 
-  // Listen for real-time notifications
+  // Listen for real-time notifications via Socket.IO
   useEffect(() => {
-    if (!socket || !isAuthenticated) return;
+    if (!socket || !isAuthenticated || !isConnected) {
+      console.log('⚠️ Socket conditions not met:', { 
+        hasSocket: !!socket, 
+        isAuthenticated, 
+        isConnected 
+      });
+      return;
+    }
+
+    console.log('👂 Setting up notification listener...');
+
     const handleNotification = (notification) => {
+      console.log('🔔 New real-time notification received:', notification);
+      
+      // Add to state
       setNotifications(prev => [notification, ...prev]);
       setUnreadCount(prev => prev + 1);
+      
+      // Show toast
+      toast.success(notification.message, {
+        duration: 5000,
+        icon: '🔔'
+      });
     };
-    socket.on('notification', handleNotification);
-    return () => socket.off('notification', handleNotification);
-  }, [socket, isAuthenticated]);
 
-  // Fetch notifications on login
+    // Listen for the notification event
+    socket.on('notification', handleNotification);
+    
+    console.log('✅ Notification listener registered');
+
+    return () => {
+      console.log('🧹 Cleaning up notification listener');
+      socket.off('notification', handleNotification);
+    };
+  }, [socket, isAuthenticated, isConnected]);
+
+  // Fetch notifications on login or when auth state changes
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    if (isAuthenticated) {
+      console.log('🔄 Auth state changed, fetching notifications...');
+      fetchNotifications();
+    } else {
+      // Clear notifications on logout
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, [isAuthenticated, fetchNotifications]);
 
   // Mark notification as read
   const markAsRead = async (id) => {
-    await markNotificationReadAPI(id);
-    setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
-    setUnreadCount(prev => Math.max(0, prev - 1));
+    try {
+      console.log('✓ Marking notification as read:', id);
+      await markNotificationReadAPI(id);
+      
+      setNotifications(prev => prev.map(n => 
+        n._id === id ? { ...n, read: true } : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      console.log('✅ Notification marked as read');
+    } catch (error) {
+      console.error('❌ Error marking notification as read:', error);
+      toast.error('Failed to mark notification as read');
+    }
   };
 
   // Mark all as read
   const markAllAsRead = async () => {
-    await markAllNotificationsReadAPI();
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setUnreadCount(0);
+    try {
+      console.log('✓ Marking all notifications as read...');
+      await markAllNotificationsReadAPI();
+      
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+      
+      console.log('✅ All notifications marked as read');
+      toast.success('All notifications marked as read');
+    } catch (error) {
+      console.error('❌ Error marking all as read:', error);
+      toast.error('Failed to mark all as read');
+    }
   };
 
   // Delete notification
   const deleteNotification = async (id) => {
-    await deleteNotificationAPI(id);
-    setNotifications(prev => prev.filter(n => n._id !== id));
+    try {
+      console.log('🗑️ Deleting notification:', id);
+      await deleteNotificationAPI(id);
+      
+      const wasUnread = notifications.find(n => n._id === id)?.read === false;
+      setNotifications(prev => prev.filter(n => n._id !== id));
+      if (wasUnread) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+      
+      console.log('✅ Notification deleted');
+    } catch (error) {
+      console.error('❌ Error deleting notification:', error);
+      toast.error('Failed to delete notification');
+    }
+  };
+
+  const value = {
+    notifications,
+    unreadCount,
+    loading,
+    fetchNotifications,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification
   };
 
   return (
-    <NotificationContext.Provider value={{ notifications, unreadCount, loading, fetchNotifications, markAsRead, markAllAsRead, deleteNotification }}>
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );

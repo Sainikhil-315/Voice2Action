@@ -27,6 +27,15 @@ const Header = () => {
   const profileMenuRef = useRef(null);
   const notificationsRef = useRef(null);
 
+  // Debug: Log notifications whenever they change
+  useEffect(() => {
+    console.log('🔍 Header - Notifications updated:', {
+      count: notifications.length,
+      unreadCount,
+      notifications
+    });
+  }, [notifications, unreadCount]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -199,7 +208,10 @@ const Header = () => {
             {isAuthenticated && (
               <div className="relative notifications-dropdown" ref={notificationsRef}>
                 <button
-                  onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                  onClick={() => {
+                    console.log('🔔 Notification button clicked. Current count:', notifications.length);
+                    setIsNotificationsOpen(!isNotificationsOpen);
+                  }}
                   className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 focus:ring-2 focus:ring-primary-500 rounded-lg transition-colors"
                   aria-label="Notifications"
                   title="View notifications"
@@ -229,11 +241,19 @@ const Header = () => {
                   <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
                     <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                       <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        Notifications
+                        Notifications {notifications.length > 0 && `(${notifications.length})`}
                       </h3>
                     </div>
 
-                    {notifications.length === 0 ? (
+                    {notificationsLoading ? (
+                      <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <svg className="w-8 h-8 mx-auto animate-spin text-primary-600" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                        </svg>
+                        <p className="text-sm mt-2">Loading notifications...</p>
+                      </div>
+                    ) : notifications.length === 0 ? (
                       <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                         <svg
                           className="w-12 h-12 mx-auto mb-2 opacity-50"
@@ -248,55 +268,74 @@ const Header = () => {
                             d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
                           />
                         </svg>
-
                         <p className="text-sm">No notifications</p>
                       </div>
                     ) : (
-                      <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
-                        {notifications.map((notification) => (
-                          <div
-                            key={notification._id}
-                            className={`px-4 py-3 flex items-start space-x-3 hover:bg-gray-50 dark:hover:bg-gray-700 ${!notification.read ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}
-                          >
-                            <div className="flex-shrink-0 pt-1">
-                              {!notification.read && <span className="inline-block w-2 h-2 rounded-full bg-primary-600" />}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-gray-900 dark:text-gray-100">
-                                {notification.message}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {new Date(notification.createdAt).toLocaleString()}
-                              </p>
-                              {!notification.read && (
-                                <button
-                                  className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1"
-                                  onClick={() => markAsRead(notification._id)}
-                                >
-                                  Mark as read
-                                </button>
-                              )}
-                              <button
-                                className="text-xs text-red-500 hover:underline ml-2"
-                                onClick={() => deleteNotification(notification._id)}
+                      <>
+                        <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                          {notifications.map((notification, index) => {
+                            console.log(`📋 Rendering notification ${index}:`, notification);
+                            return (
+                              <div
+                                key={notification._id}
+                                className={`px-4 py-3 flex items-start space-x-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                                  !notification.read ? 'bg-primary-50 dark:bg-primary-900/20' : ''
+                                }`}
                               >
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                                <div className="flex-shrink-0 pt-1">
+                                  {!notification.read && (
+                                    <span className="inline-block w-2 h-2 rounded-full bg-primary-600" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-gray-900 dark:text-gray-100">
+                                    {notification.message}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    {new Date(notification.createdAt).toLocaleString()}
+                                  </p>
+                                  <div className="mt-2 flex items-center space-x-2">
+                                    {!notification.read && (
+                                      <button
+                                        className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                                        onClick={() => {
+                                          console.log('✓ Mark as read clicked:', notification._id);
+                                          markAsRead(notification._id);
+                                        }}
+                                      >
+                                        Mark as read
+                                      </button>
+                                    )}
+                                    <button
+                                      className="text-xs text-red-500 hover:underline"
+                                      onClick={() => {
+                                        console.log('🗑️ Delete clicked:', notification._id);
+                                        deleteNotification(notification._id);
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
 
-                    <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-                      <button
-                        className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-                        onClick={markAllAsRead}
-                        disabled={unreadCount === 0}
-                      >
-                        Mark all as read
-                      </button>
-                    </div>
+                        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                          <button
+                            className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => {
+                              console.log('✓ Mark all as read clicked');
+                              markAllAsRead();
+                            }}
+                            disabled={unreadCount === 0}
+                          >
+                            Mark all as read
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -400,7 +439,7 @@ const Header = () => {
 
                       {isAdmin() && (
                         <Link
-                          to="/admin"
+                          to="/admin/verification"
                           className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                           onClick={() => setIsProfileMenuOpen(false)}
                         >

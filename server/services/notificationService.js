@@ -2,66 +2,94 @@
 const emailService = require('./emailService');
 const smsService = require('./smsService');
 const { emitToUser, emitToRole, notifyIssueStatusUpdate } = require('../config/socket');
+const { createNotification } = require('../utils/notificationUtils');
 
 // Unified notification service
 class NotificationService {
   constructor(io) {
     this.io = io;
+    console.log('✅ NotificationService initialized with Socket.IO');
   }
 
   // Send issue status update notifications
   async notifyIssueStatusChange(issue, oldStatus, newStatus, updatedBy, adminNotes = '') {
     const notifications = [];
     try {
-      // Get reporter details
-      const reporter = await issue.populate('reporter');
+      console.log(`📢 Notifying status change for issue ${issue._id}: ${oldStatus} → ${newStatus}`);
+      
+      // Get reporter details - FIX: Check if already populated
+      let reporter;
+      if (issue.reporter && issue.reporter._id) {
+        reporter = issue.reporter;
+      } else {
+        const populatedIssue = await issue.populate('reporter');
+        reporter = populatedIssue.reporter;
+      }
 
-      // 1. Real-time notification via Socket.IO and DB
+      if (!reporter) {
+        console.error('❌ Reporter not found for issue:', issue._id);
+        throw new Error('Reporter not found');
+      }
+
+      console.log('👤 Reporter:', reporter._id, reporter.name);
+
+      // 1. Save notification to DB and emit via Socket.IO
       if (this.io) {
-        // Save notification in DB
-        const { createNotification } = require('../utils/notificationUtils');
+        const message = `Your issue "${issue.title}" status changed to ${newStatus}.`;
+        
+        // FIX: Pass io instance to createNotification
         const notification = await createNotification(
-          reporter.reporter._id,
+          reporter._id,
           'status_update',
-          `Your issue "${issue.title}" status changed to ${newStatus}.`,
-          { issueId: issue._id, oldStatus, newStatus, adminNotes }
+          message,
+          { issueId: issue._id, oldStatus, newStatus, adminNotes },
+          this.io  // ✅ Pass Socket.IO instance
         );
-        this.io.to(`user_${reporter.reporter._id}`).emit('notification', notification);
-        notifications.push({ type: 'realtime', success: true });
+        
+        notifications.push({ type: 'realtime', success: true, notificationId: notification._id });
+        console.log('✅ Real-time notification sent to user:', reporter._id);
+        
+        // Also use the socket helper for additional notifications
         notifyIssueStatusUpdate(this.io, issue, oldStatus, newStatus, updatedBy);
       }
 
       // 2. Email notification
       const emailResult = await emailService.sendIssueStatusEmail(
-        reporter.reporter, 
+        reporter, 
         issue, 
         newStatus, 
         adminNotes
       );
       notifications.push({ type: 'email', ...emailResult });
+      console.log('📧 Email notification:', emailResult.success ? 'sent' : 'failed');
 
       // 3. SMS notification (if enabled)
-      if (reporter.reporter.phone && reporter.reporter.preferences.smsNotifications) {
+      if (reporter.phone && reporter.preferences?.smsNotifications) {
         const smsResult = await smsService.sendIssueStatusSMS(
-          reporter.reporter, 
+          reporter, 
           issue, 
           newStatus
         );
         notifications.push({ type: 'sms', ...smsResult });
+        console.log('📱 SMS notification:', smsResult.success ? 'sent' : 'failed');
       }
+
+      const summary = {
+        total: notifications.length,
+        successful: notifications.filter(n => n.success).length,
+        failed: notifications.filter(n => !n.success).length
+      };
+
+      console.log('📊 Notification summary:', summary);
 
       return {
         success: true,
         notifications,
-        summary: {
-          total: notifications.length,
-          successful: notifications.filter(n => n.success).length,
-          failed: notifications.filter(n => !n.success).length
-        }
+        summary
       };
 
     } catch (error) {
-      console.error('Notification service error:', error);
+      console.error('❌ Notification service error:', error);
       return {
         success: false,
         error: error.message,
@@ -75,6 +103,8 @@ class NotificationService {
     const notifications = [];
 
     try {
+      console.log(`📢 Notifying ${authorities.length} authorities about new issue ${issue._id}`);
+
       for (const authority of authorities) {
         // Email notification
         const emailResult = await emailService.sendAuthorityNotificationEmail(
@@ -110,6 +140,7 @@ class NotificationService {
           location: issue.location,
           timestamp: new Date()
         });
+        console.log('✅ Admin notification emitted');
       }
 
       return {
@@ -123,7 +154,7 @@ class NotificationService {
       };
 
     } catch (error) {
-      console.error('New issue notification error:', error);
+      console.error('❌ New issue notification error:', error);
       return {
         success: false,
         error: error.message,
@@ -137,6 +168,8 @@ class NotificationService {
     const notifications = [];
 
     try {
+      console.log(`🚨 Sending urgent alerts for issue ${issue._id}`);
+
       for (const contact of emergencyContacts) {
         // Emergency SMS
         const smsResult = await smsService.sendUrgentIssueAlertSMS(
@@ -183,7 +216,7 @@ class NotificationService {
       };
 
     } catch (error) {
-      console.error('Urgent alert error:', error);
+      console.error('❌ Urgent alert error:', error);
       return {
         success: false,
         error: error.message,
@@ -197,24 +230,28 @@ class NotificationService {
     const notifications = [];
 
     try {
+      console.log(`👋 Sending welcome notification to ${user.email}`);
+
       // Welcome email
       const emailResult = await emailService.sendWelcomeEmail(user);
       notifications.push({ type: 'welcome_email', ...emailResult });
 
       // Welcome SMS (optional)
-      if (user.phone && user.preferences.smsNotifications) {
+      if (user.phone && user.preferences?.smsNotifications) {
         const message = `Welcome to Voice2Action! 🎉 Start reporting issues and help improve your community. Download the app: ${process.env.CLIENT_URL}`;
         const smsResult = await smsService.sendSMS(user.phone, message);
         notifications.push({ type: 'welcome_sms', ...smsResult });
       }
 
-      // Real-time welcome message
+      // Real-time welcome message and DB notification
       if (this.io) {
-        emitToUser(this.io, user._id, 'welcome_message', {
-          message: 'Welcome to Voice2Action! Ready to make a difference?',
-          type: 'success',
-          timestamp: new Date()
-        });
+        await createNotification(
+          user._id,
+          'welcome',
+          'Welcome to Voice2Action! Ready to make a difference?',
+          {},
+          this.io
+        );
       }
 
       return {
@@ -228,7 +265,7 @@ class NotificationService {
       };
 
     } catch (error) {
-      console.error('Welcome notification error:', error);
+      console.error('❌ Welcome notification error:', error);
       return {
         success: false,
         error: error.message,
@@ -242,10 +279,12 @@ class NotificationService {
     const notifications = [];
 
     try {
+      console.log(`📊 Sending monthly reports to ${users.length} users`);
+
       for (const user of users) {
         const userReport = reportData.find(r => r.userId.toString() === user._id.toString());
         
-        if (userReport && user.preferences.emailNotifications) {
+        if (userReport && user.preferences?.emailNotifications) {
           const emailResult = await emailService.sendMonthlyReportEmail(user, userReport);
           notifications.push({ 
             type: 'monthly_report', 
@@ -266,7 +305,7 @@ class NotificationService {
       };
 
     } catch (error) {
-      console.error('Monthly report error:', error);
+      console.error('❌ Monthly report error:', error);
       return {
         success: false,
         error: error.message,
@@ -280,12 +319,20 @@ class NotificationService {
     const notifications = [];
 
     try {
+      console.log('📢 Sending system announcement...');
+
       // Real-time announcement
       if (this.io) {
         if (targetUsers) {
-          targetUsers.forEach(userId => {
-            emitToUser(this.io, userId, 'system_announcement', announcement);
-          });
+          for (const userId of targetUsers) {
+            await createNotification(
+              userId,
+              'announcement',
+              announcement.message,
+              announcement,
+              this.io
+            );
+          }
         } else {
           this.io.emit('system_announcement', announcement);
         }
@@ -319,7 +366,7 @@ class NotificationService {
       };
 
     } catch (error) {
-      console.error('System announcement error:', error);
+      console.error('❌ System announcement error:', error);
       return {
         success: false,
         error: error.message,
