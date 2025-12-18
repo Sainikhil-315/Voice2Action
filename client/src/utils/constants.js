@@ -78,7 +78,7 @@ export const FILE_UPLOAD = {
 
 // Map Configuration
 export const MAP_CONFIG = {
-  defaultCenter: [17.6868, 83.2185], // Bhimavaram, Andhra Pradesh
+  defaultCenter: [16.591659, 81.541294], // Bhimavaram, Andhra Pradesh
   defaultZoom: 13,
   maxZoom: 18,
   minZoom: 5,

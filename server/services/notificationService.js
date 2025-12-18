@@ -12,15 +12,23 @@ class NotificationService {
   // Send issue status update notifications
   async notifyIssueStatusChange(issue, oldStatus, newStatus, updatedBy, adminNotes = '') {
     const notifications = [];
-
     try {
       // Get reporter details
       const reporter = await issue.populate('reporter');
-      
-      // 1. Real-time notification via Socket.IO
+
+      // 1. Real-time notification via Socket.IO and DB
       if (this.io) {
-        notifyIssueStatusUpdate(this.io, issue, oldStatus, newStatus, updatedBy);
+        // Save notification in DB
+        const { createNotification } = require('../utils/notificationUtils');
+        const notification = await createNotification(
+          reporter.reporter._id,
+          'status_update',
+          `Your issue "${issue.title}" status changed to ${newStatus}.`,
+          { issueId: issue._id, oldStatus, newStatus, adminNotes }
+        );
+        this.io.to(`user_${reporter.reporter._id}`).emit('notification', notification);
         notifications.push({ type: 'realtime', success: true });
+        notifyIssueStatusUpdate(this.io, issue, oldStatus, newStatus, updatedBy);
       }
 
       // 2. Email notification

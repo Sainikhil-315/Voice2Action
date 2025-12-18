@@ -857,17 +857,20 @@ router.post('/:id/comments', protect, async (req, res) => {
       category: issue.category
     });
 
-    // Emit real-time notification
-    const io  = req.app.get('io');
-    if (io) {
-      io.to('role_admin').emit('new_issue_submitted', {
-        issueId: issue._id,
-        title: issue.title,
-        category: issue.category,
-        priority: issue.priority,
-        reporter: issue.reporter.name,
-        location: issue.location
-      });
+
+    // Notify the reporter (if not commenting on own issue)
+    if (issue.reporter.toString() !== req.user._id.toString()) {
+      const { createNotification } = require('../utils/notificationUtils');
+      const io = req.app.get('io');
+      const notification = await createNotification(
+        issue.reporter,
+        'comment',
+        `${req.user.name} commented on your issue: "${issue.title}"`,
+        { issueId: issue._id, commentId: newComment._id }
+      );
+      if (io) {
+        io.to(`user_${issue.reporter}`).emit('notification', notification);
+      }
     }
 
     res.status(201).json({

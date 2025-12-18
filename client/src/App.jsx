@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 // Context Providers
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 // Components
 import Header from './components/common/Header';
@@ -61,6 +62,7 @@ function App() {
   return (
     <AuthProvider>
       <SocketProvider>
+        <NotificationProvider>
         <Router future={{ v7_startTransition: true }}>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
             {/* Toast Notifications */}
@@ -209,6 +211,7 @@ function App() {
             <OfflineBanner />
           </div>
         </Router>
+        </NotificationProvider>
       </SocketProvider>
     </AuthProvider>
   );

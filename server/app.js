@@ -14,6 +14,7 @@ const adminRoutes = require('./routes/admin');
 const authorityRoutes = require('./routes/authorities');
 const leaderboardRoutes = require('./routes/leaderboard');
 const feedbackRoutes = require('./routes/feedback');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
@@ -147,6 +148,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/authorities', authorityRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

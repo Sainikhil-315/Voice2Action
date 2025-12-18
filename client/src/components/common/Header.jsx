@@ -1,5 +1,6 @@
 // src/components/common/Header.jsx
 import React, { useState, useRef, useEffect } from "react";
+import { useNotifications } from "../../context/NotificationContext";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
@@ -14,8 +15,14 @@ const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const {
+    notifications,
+    unreadCount,
+    loading: notificationsLoading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification
+  } = useNotifications();
 
   const profileMenuRef = useRef(null);
   const notificationsRef = useRef(null);
@@ -45,16 +52,6 @@ const Header = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
-
-  // Handle quick search shortcut
-  // useEffect(() => {
-  //   const handleQuickSearch = () => {
-  //     document.getElementById("quick-search")?.focus();
-  //   };
-
-  //   window.addEventListener("quicksearch", handleQuickSearch);
-  //   return () => window.removeEventListener("quicksearch", handleQuickSearch);
-  // }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -251,27 +248,40 @@ const Header = () => {
                             d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
                           />
                         </svg>
+
                         <p className="text-sm">No notifications</p>
                       </div>
                     ) : (
-                      <div className="max-h-80 overflow-y-auto">
+                      <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
                         {notifications.map((notification) => (
                           <div
-                            key={notification.id}
-                            className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-100 dark:border-gray-600 last:border-0"
+                            key={notification._id}
+                            className={`px-4 py-3 flex items-start space-x-3 hover:bg-gray-50 dark:hover:bg-gray-700 ${!notification.read ? 'bg-primary-50 dark:bg-primary-900/20' : ''}`}
                           >
-                            <div className="flex items-start space-x-3">
-                              <div className="flex-shrink-0">
-                                <div className="w-2 h-2 bg-primary-600 rounded-full mt-2" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-900 dark:text-gray-100">
-                                  {notification.message}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                  {notification.time}
-                                </p>
-                              </div>
+                            <div className="flex-shrink-0 pt-1">
+                              {!notification.read && <span className="inline-block w-2 h-2 rounded-full bg-primary-600" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-900 dark:text-gray-100">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {new Date(notification.createdAt).toLocaleString()}
+                              </p>
+                              {!notification.read && (
+                                <button
+                                  className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1"
+                                  onClick={() => markAsRead(notification._id)}
+                                >
+                                  Mark as read
+                                </button>
+                              )}
+                              <button
+                                className="text-xs text-red-500 hover:underline ml-2"
+                                onClick={() => deleteNotification(notification._id)}
+                              >
+                                Delete
+                              </button>
                             </div>
                           </div>
                         ))}
@@ -279,7 +289,11 @@ const Header = () => {
                     )}
 
                     <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-                      <button className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium">
+                      <button
+                        className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+                        onClick={markAllAsRead}
+                        disabled={unreadCount === 0}
+                      >
                         Mark all as read
                       </button>
                     </div>

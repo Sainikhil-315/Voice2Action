@@ -236,14 +236,14 @@ const UserDashboard = () => {
               <div className="px-6 py-4 border-b border-gray-200">
                 <h2 className="text-lg font-medium text-gray-900">Community Impact</h2>
               </div>
-              
+              {console.log(stats)}
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="text-center">
                     <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
                       <Target className="w-8 h-8 text-blue-600" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">{stats?.totalIssues || 0}</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats?.data.overview.total || 0}</p>
                     <p className="text-sm text-gray-600">Total Issues Reported</p>
                   </div>
                   
@@ -251,7 +251,7 @@ const UserDashboard = () => {
                     <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-3">
                       <CheckCircle className="w-8 h-8 text-green-600" />
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">{stats?.resolvedIssues || 0}</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats?.data.overview.resolved || 0}</p>
                     <p className="text-sm text-gray-600">Issues Resolved</p>
                   </div>
                   
@@ -260,7 +260,7 @@ const UserDashboard = () => {
                       <TrendingUp className="w-8 h-8 text-purple-600" />
                     </div>
                     <p className="text-2xl font-bold text-gray-900">
-                      {stats?.totalIssues ? Math.round((stats.resolvedIssues / stats.totalIssues) * 100) : 0}%
+                      {stats?.data.overview.resolutionRate || 0}%
                     </p>
                     <p className="text-sm text-gray-600">Resolution Rate</p>
                   </div>

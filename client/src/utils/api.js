@@ -1,8 +1,6 @@
-// src/utils/api.js
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-// ✅ Single source of truth for API URL
 const getBaseURL = () => {
   // In production, use environment variable
   if (process.env.NODE_ENV === 'production') {
@@ -209,6 +207,12 @@ export const authAPI = {
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token, password) => api.post(`/auth/reset-password/${token}`, { password })
 };
+
+// Notification API
+export const getNotificationsAPI = () => api.get('/notifications');
+export const markNotificationReadAPI = (id) => api.patch(`/notifications/${id}/read`);
+export const markAllNotificationsReadAPI = () => api.patch('/notifications/read-all');
+export const deleteNotificationAPI = (id) => api.delete(`/notifications/${id}`);
 
 export const issuesAPI = {
   getAll: (params) => api.get('/issues', { params }),
