@@ -46,7 +46,9 @@ const UserDashboard = () => {
       setStats(issuesResponse.data)
       setUserRank(rankResponse.data)
       setRecentIssues(userIssuesResponse.data.data.issues)
-      
+      console.log("1. Stats", stats);
+      console.log("2. User Rank", userRank);
+      console.log("3. Recent Issues", recentIssues);
       // Mock activities - in real app, this would come from API
       setActivities([
         {
@@ -80,32 +82,32 @@ const UserDashboard = () => {
       setLoading(false)
     }
   }
-
+  console.log("User Rank outside", userRank);
   const quickStats = [
     {
       title: 'Issues Reported',
-      value: userRank?.totalIssues || 0,
+      value: userRank?.data.totalIssues || 0,
       icon: Plus,
       color: 'blue',
       change: '+2 this month'
     },
     {
       title: 'Issues Resolved',
-      value: userRank?.resolvedIssues || 0,
+      value: userRank?.data.resolvedIssues || 0,
       icon: CheckCircle,
       color: 'green',
       change: '+5 this month'
     },
     {
       title: 'Community Points',
-      value: userRank?.totalPoints || 0,
+      value: userRank?.data.stats.totalPoints || 0,
       icon: Trophy,
       color: 'yellow',
-      change: '+15 this week'
+      change: userRank ? `+${userRank.data.monthlyPoints || 0} this month` : 'N/A'
     },
     {
       title: 'Current Rank',
-      value: `#${userRank?.rank || 'N/A'}`,
+      value: `#${userRank?.data.rank || 'N/A'}`,
       icon: TrendingUp,
       color: 'purple',
       change: '↑2 positions'

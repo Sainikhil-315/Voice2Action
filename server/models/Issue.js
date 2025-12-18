@@ -19,7 +19,7 @@ const issueSchema = new mongoose.Schema({
     required: [true, 'Category is required'],
     enum: [
       'road_maintenance',
-      'waste_management', 
+      'waste_management',
       'water_supply',
       'electricity',
       'fire_safety',
@@ -188,7 +188,39 @@ const issueSchema = new mongoose.Schema({
   views: {
     type: Number,
     default: 0,
-  }
+  },
+  aiAnalysis: {
+    score: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    communityAdjustedScore: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    communityBoost: {
+      type: Number,
+      default: 0
+    },
+    reasoning: String,
+    confidence: Number,
+    severityFactors: {
+      visualSeverity: Number,
+      locationRisk: Number,
+      textUrgency: Number,
+      temporalContext: Number
+    },
+    recommendations: String,
+    fraudCheck: {
+      isAuthentic: Boolean,
+      imageMatchesDescription: Boolean,
+      locationVerified: Boolean,
+      duplicateCheck: Boolean
+    },
+    analyzedAt: Date
+  },
 });
 
 issueSchema.index({ title: 'text', description: 'text' });
@@ -198,20 +230,20 @@ issueSchema.index({ assignedTo: 1, status: 1 });
 issueSchema.index({ category: 1, status: 1 });
 issueSchema.index({ priority: 1, status: 1 });
 issueSchema.index({ 'location.coordinates': '2dsphere' });
-issueSchema.index({ 
-  'location.state': 1, 
-  'location.district': 1, 
-  'location.municipality': 1 
+issueSchema.index({
+  'location.state': 1,
+  'location.district': 1,
+  'location.municipality': 1
 });
 
 // ✅ PRE-SAVE: Update timestamp
-issueSchema.pre('save', function(next) {
+issueSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });
 
 // ✅ PRE-SAVE: Add timeline entry on status change
-issueSchema.pre('save', function(next) {
+issueSchema.pre('save', function (next) {
   if (this.isModified('status') && !this.isNew) {
     // Only add if not already added manually
     const lastTimeline = this.timeline[this.timeline.length - 1];
@@ -227,52 +259,52 @@ issueSchema.pre('save', function(next) {
 });
 
 // ✅ PRE-SAVE: Calculate resolution time when resolved
-issueSchema.pre('save', function(next) {
+issueSchema.pre('save', function (next) {
   if (this.status === 'resolved' && !this.actualResolutionTime) {
     this.resolvedAt = new Date();
-    
+
     // Calculate from work start time if available, otherwise from creation
     const startTime = this.workStartedAt || this.createdAt;
     const resolutionTime = (this.resolvedAt - startTime) / (1000 * 60 * 60); // hours
-    
+
     this.actualResolutionTime = Math.round(resolutionTime * 100) / 100;
   }
   next();
 });
 
 // ✅ METHOD: Get jurisdiction display string
-issueSchema.methods.getJurisdictionDisplay = function() {
+issueSchema.methods.getJurisdictionDisplay = function () {
   const parts = [
     this.location.municipality,
     this.location.district,
     this.location.state
   ].filter(Boolean);
-  
+
   return parts.length > 0 ? parts.join(', ') : 'Unknown location';
 };
 
 // ✅ METHOD: Check if jurisdiction is complete
-issueSchema.methods.hasCompleteJurisdiction = function() {
+issueSchema.methods.hasCompleteJurisdiction = function () {
   return !!(this.location.state && this.location.district);
 };
 
 // ✅ STATIC: Get issues by jurisdiction
-issueSchema.statics.findByJurisdiction = function(state, district = null, municipality = null) {
+issueSchema.statics.findByJurisdiction = function (state, district = null, municipality = null) {
   const query = { 'location.state': state };
-  
+
   if (district) {
     query['location.district'] = district;
   }
-  
+
   if (municipality) {
     query['location.municipality'] = municipality;
   }
-  
+
   return this.find(query);
 };
 
 // ✅ STATIC: Get jurisdiction analytics
-issueSchema.statics.getJurisdictionStats = async function() {
+issueSchema.statics.getJurisdictionStats = async function () {
   return this.aggregate([
     {
       $group: {

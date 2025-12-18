@@ -216,11 +216,17 @@ const StatsTab = () => {
         issuesAPI.getMyIssues({ limit: 5, sort: '-createdAt' }),
         leaderboardAPI.getAchievements().catch(() => ({ data: [] }))
       ]);
+      console.log('User History Response:', historyResponse);
+      console.log('User Issues Response:', issuesResponse);
+      console.log('Achievements Response:', achievementsResponse);
 
       // Defensive: support both .data and .data.data for issues
       const issuesData = issuesResponse.data?.data || issuesResponse.data || {};
       const issuesList = issuesData.issues || [];
       const totalIssues = issuesData.total || issuesList.length;
+      console.log('Issues Data:', issuesData);
+      console.log('Parsed Issues List:', issuesList);
+      console.log('Total Issues:', totalIssues);
       // Defensive: support both .data and .data.data for history
       const historyData = historyResponse.data || historyResponse;
 
@@ -232,22 +238,24 @@ const StatsTab = () => {
         comments: issue.comments || issue.commentCount || 0
       }));
       setRecentIssues(mappedIssues);
+      console.log('Mapped Recent Issues:', mappedIssues);
       setAchievements(achievementsResponse.data || []);
 
       // Calculate additional stats
       const resolvedIssues = mappedIssues.filter(issue => issue.status === 'resolved').length || 0;
       // Use user.stats if available for fallback
       const userStats = user.stats || {};
+      console.log('User Stats Fallback:', userStats);
       setStats({
-        issuesReported: totalIssues || userStats.totalIssuesReported || 0,
+        issuesReported: historyData.data.totalIssues || 0,
         issuesResolved: resolvedIssues || userStats.issuesResolved || 0,
-        totalPoints: historyData.totalPoints ?? userStats.contributionScore ?? 0,
-        currentRank: historyData.rank ?? 0,
-        monthlyPoints: historyData.monthlyPoints ?? 0,
-        contributions: historyData.monthlyContributions ?? [],
-        resolutionRate: (totalIssues > 0 ? Math.round((resolvedIssues / totalIssues) * 100) : 0),
-        monthlyIssues: historyData.monthlyIssues ?? 0,
-        rankChange: historyData.rankChange ?? 0
+        totalPoints: historyData.data.totalPoints ?? userStats.contributionScore ?? 0,
+        currentRank: historyData.data.rank ?? 0,
+        monthlyPoints: historyData.data.monthlyPoints ?? 0,
+        contributions: historyData.data.monthlyContributions ?? [],
+        resolutionRate: (historyData.data.totalIssues > 0 ? Math.round((resolvedIssues / historyData.data.totalIssues) * 100) : 0),
+        monthlyIssues: historyData.data.monthlyIssues ?? 0,
+        rankChange: historyData.data.rankChange ?? 0
       });
     } catch (error) {
       console.error('Error loading user stats:', error);

@@ -2,6 +2,7 @@
 const http = require('http');
 const socketIo = require('socket.io');
 const cron = require('node-cron');
+const fetch = require("node-fetch");
 require('dotenv').config();
 
 const app = require('./app');

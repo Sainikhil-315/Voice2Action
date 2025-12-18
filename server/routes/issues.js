@@ -15,6 +15,7 @@ const {
   validateGeolocation 
 } = require('../utils/validators');
 const turf = require('@turf/turf');
+const geminiService = require('../services/geminiService');
 
 const router = express.Router();
 
@@ -277,7 +278,6 @@ router.get('/:id', optionalAuth, async (req, res) => {
 // @access  Private
 router.post('/', protect, handleMultipleUpload, async (req, res) => {
   try {
-    // Validate issue data
     const { error, value } = validateIssueSubmission(req.body);
     if (error) {
       return res.status(400).json({
@@ -286,26 +286,48 @@ router.post('/', protect, handleMultipleUpload, async (req, res) => {
       });
     }
 
-    // Upload media files if any
+    // Upload media files
     let mediaFiles = [];
+    let imageDataForGemini = null;
+
     if (req.files && req.files.length > 0) {
       const uploadResults = await uploadMultipleFiles(req.files);
-      
-      // Filter successful uploads
       mediaFiles = uploadResults.filter(result => !result.error);
-      
-      // Log any upload errors
-      const errors = uploadResults.filter(result => result.error);
-      if (errors.length > 0) {
-        console.warn('File upload errors:', errors);
+
+      // Prepare first image for Gemini analysis
+      const firstImage = req.files.find(f => f.mimetype.startsWith('image/'));
+      if (firstImage) {
+        imageDataForGemini = {
+          base64: firstImage.buffer.toString('base64'),
+          mimeType: firstImage.mimetype
+        };
       }
     }
 
-    // Create issue
+    // GEMINI AI ANALYSIS
+    const geminiAnalysis = await geminiService.analyzeIssuePriority({
+      title: value.title,
+      description: value.description,
+      category: value.category,
+      location: value.location,
+      imageData: imageDataForGemini
+    });
+
+    // Create issue with AI-generated priority
     const issueData = {
       ...value,
       reporter: req.user._id,
       media: mediaFiles,
+      priority: geminiAnalysis.data.priorityLevel.toLowerCase(),
+      aiAnalysis: {
+        score: geminiAnalysis.data.priorityScore,
+        reasoning: geminiAnalysis.data.reasoning,
+        confidence: geminiAnalysis.data.confidence,
+        severityFactors: geminiAnalysis.data.severityFactors,
+        recommendations: geminiAnalysis.data.recommendations,
+        fraudCheck: geminiAnalysis.data.fraudCheck,
+        analyzedAt: new Date()
+      },
       timeline: [{
         action: 'submitted',
         timestamp: new Date(),
@@ -314,8 +336,6 @@ router.post('/', protect, handleMultipleUpload, async (req, res) => {
     };
 
     const issue = await Issue.create(issueData);
-    
-    // Populate the created issue
     await issue.populate('reporter', 'name email avatar');
 
     // Update user stats
@@ -328,55 +348,26 @@ router.post('/', protect, handleMultipleUpload, async (req, res) => {
       user: req.user._id,
       type: 'issue_reported',
       issue: issue._id,
-      points: 2, // 2 points for reporting an issue
+      points: 2,
       month: new Date().getMonth() + 1,
       year: new Date().getFullYear(),
-      category: issue.category,
-      metadata: {
-        priority: issue.priority,
-        location: {
-          ward: issue.location.ward,
-          district: issue.location.district
-        }
-      }
+      category: issue.category
     });
-
-    // Find and notify relevant authorities
-    const authorities = await Authority.find({
-      department: issue.category,
-      status: 'active'
-    });
-
-    // Send notifications
-    const notificationService = req.app.get('notificationService');
-    if (notificationService && authorities.length > 0) {
-      await notificationService.notifyNewIssue(issue, authorities);
-    }
-
-    // Emit real-time notification for new issue
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('new_issue_submitted', {
-        issueId: issue._id,
-        title: issue.title,
-        category: issue.category,
-        priority: issue.priority,
-        reporter: issue.reporter.name,
-        location: issue.location
-      });
-    }
 
     res.status(201).json({
       success: true,
-      message: 'Issue reported successfully',
-      data: { issue }
+      message: 'Issue reported and analyzed successfully',
+      data: { 
+        issue,
+        aiAnalysis: geminiAnalysis.data
+      }
     });
 
   } catch (error) {
-    console.error('Add comment error:', error);
+    console.error('Create issue error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to add comment',
+      message: 'Failed to create issue',
       error: error.message
     });
   }
@@ -396,62 +387,60 @@ router.post('/:id/upvote', protect, async (req, res) => {
       });
     }
 
-    // Check if user already upvoted
     const existingUpvoteIndex = issue.upvotes.findIndex(
       upvote => upvote.user.toString() === req.user._id.toString()
     );
 
     let action;
     if (existingUpvoteIndex > -1) {
-      // Remove upvote
       issue.upvotes.splice(existingUpvoteIndex, 1);
       action = 'removed';
 
-      // Remove contribution record
       await Contribution.findOneAndDelete({
         user: req.user._id,
         issue: issue._id,
         type: 'upvote_given'
       });
     } else {
-      // Add upvote
       issue.upvotes.push({
         user: req.user._id,
         timestamp: new Date()
       });
       action = 'added';
 
-      // Create contribution record
       await Contribution.create({
         user: req.user._id,
         type: 'upvote_given',
         issue: issue._id,
-        points: 1, // 1 point for upvoting
+        points: 1,
         month: new Date().getMonth() + 1,
         year: new Date().getFullYear(),
         category: issue.category
       });
     }
 
-    await issue.save();
+    // ADJUST PRIORITY WITH COMMUNITY INPUT
+    if (issue.aiAnalysis && issue.aiAnalysis.score) {
+      const adjusted = geminiService.adjustPriorityWithCommunity(
+        issue.aiAnalysis.score,
+        issue.upvotes.length
+      );
 
-    // Emit real-time notification
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`issue_${issue._id}`).emit('upvote_updated', {
-        issueId: issue._id,
-        upvoteCount: issue.upvotes.length,
-        action,
-        user: req.user.name
-      });
+      issue.priority = adjusted.priorityLevel.toLowerCase();
+      issue.aiAnalysis.communityAdjustedScore = adjusted.adjustedScore;
+      issue.aiAnalysis.communityBoost = adjusted.communityBoost;
     }
+
+    await issue.save();
 
     res.json({
       success: true,
       message: `Upvote ${action} successfully`,
       data: {
         upvoteCount: issue.upvotes.length,
-        userUpvoted: action === 'added'
+        userUpvoted: action === 'added',
+        adjustedPriority: issue.priority,
+        aiAnalysis: issue.aiAnalysis
       }
     });
 
