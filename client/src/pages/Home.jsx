@@ -585,7 +585,7 @@ const Home = () => {
                       </span>
                     </div>
                     <div className="bg-gray-100 rounded-lg h-32 mb-4 flex items-center justify-center">
-                      {stats.data.latestIssue.media[0].type === "image" ? (
+                      {stats.data.latestIssue.media[0]?.type === "image" ? (
                         <img
                           src={stats.data.latestIssue.media[0].url}
                           alt={stats.data.latestIssue.title}

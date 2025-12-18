@@ -304,7 +304,8 @@ router.post('/', protect, handleMultipleUpload, async (req, res) => {
       }
     }
 
-    // GEMINI AI ANALYSIS
+    // 🚀 GEMINI AI VALIDATION & ANALYSIS
+    console.log('🔍 Starting Gemini validation...');
     const geminiAnalysis = await geminiService.analyzeIssuePriority({
       title: value.title,
       description: value.description,
@@ -313,7 +314,26 @@ router.post('/', protect, handleMultipleUpload, async (req, res) => {
       imageData: imageDataForGemini
     });
 
-    // Create issue with AI-generated priority
+    // ❌ REJECT if validation fails
+    if (!geminiAnalysis.data.isValid) {
+      console.log('❌ Issue rejected by Gemini:', geminiAnalysis.data.rejectionReason);
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Issue validation failed',
+        validationFailed: true,
+        validationDetails: {
+          reason: geminiAnalysis.data.rejectionReason,
+          validationScore: geminiAnalysis.data.validationScore,
+          details: geminiAnalysis.data.validationDetails,
+          fraudCheck: geminiAnalysis.data.fraudCheck
+        }
+      });
+    }
+
+    // ✅ Validation passed - Create issue
+    console.log('✅ Issue validated by Gemini');
+
     const issueData = {
       ...value,
       reporter: req.user._id,
@@ -321,17 +341,20 @@ router.post('/', protect, handleMultipleUpload, async (req, res) => {
       priority: geminiAnalysis.data.priorityLevel.toLowerCase(),
       aiAnalysis: {
         score: geminiAnalysis.data.priorityScore,
+        validationScore: geminiAnalysis.data.validationScore,
         reasoning: geminiAnalysis.data.reasoning,
         confidence: geminiAnalysis.data.confidence,
         severityFactors: geminiAnalysis.data.severityFactors,
         recommendations: geminiAnalysis.data.recommendations,
         fraudCheck: geminiAnalysis.data.fraudCheck,
+        validationDetails: geminiAnalysis.data.validationDetails,
         analyzedAt: new Date()
       },
       timeline: [{
         action: 'submitted',
         timestamp: new Date(),
-        user: req.user._id
+        user: req.user._id,
+        notes: `AI Validation Score: ${geminiAnalysis.data.validationScore}/100`
       }]
     };
 
@@ -354,12 +377,44 @@ router.post('/', protect, handleMultipleUpload, async (req, res) => {
       category: issue.category
     });
 
+    // Find and notify relevant authorities (only if validated)
+    const authorities = await Authority.find({
+      department: issue.category,
+      status: 'active'
+    });
+
+    // Send notifications
+    const notificationService = req.app.get('notificationService');
+    if (notificationService && authorities.length > 0) {
+      await notificationService.notifyNewIssue(issue, authorities);
+    }
+
+    // Emit real-time notification
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new_issue_submitted', {
+        issueId: issue._id,
+        title: issue.title,
+        category: issue.category,
+        priority: issue.priority,
+        reporter: issue.reporter.name,
+        location: issue.location,
+        validationScore: geminiAnalysis.data.validationScore
+      });
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Issue reported and analyzed successfully',
+      message: 'Issue validated and reported successfully',
       data: { 
         issue,
-        aiAnalysis: geminiAnalysis.data
+        aiAnalysis: {
+          validationScore: geminiAnalysis.data.validationScore,
+          priorityScore: geminiAnalysis.data.priorityScore,
+          priorityLevel: geminiAnalysis.data.priorityLevel,
+          reasoning: geminiAnalysis.data.reasoning,
+          recommendations: geminiAnalysis.data.recommendations
+        }
       }
     });
 

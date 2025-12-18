@@ -158,6 +158,7 @@ const VoiceRecorder = ({
         <div className="flex items-center space-x-3">
           {!isRecording && !recordedAudio && (
             <button
+              type="button"
               onClick={startRecording}
               className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
             >
@@ -169,6 +170,7 @@ const VoiceRecorder = ({
           {isRecording && (
             <div className="flex items-center space-x-2">
               <button
+                type="button"
                 onClick={stopRecording}
                 className="flex items-center space-x-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors"
               >
@@ -178,6 +180,7 @@ const VoiceRecorder = ({
               
               {!isPaused ? (
                 <button
+                  type="button"
                   onClick={pauseRecording}
                   className="flex items-center space-x-2 bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg transition-colors"
                 >
@@ -185,6 +188,7 @@ const VoiceRecorder = ({
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={resumeRecording}
                   className="flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg transition-colors"
                 >
@@ -197,6 +201,7 @@ const VoiceRecorder = ({
           {recordedAudio && (
             <div className="flex items-center space-x-2">
               <button
+                type="button"
                 onClick={isPlaying ? pausePlayback : playRecording}
                 className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
               >
@@ -205,6 +210,7 @@ const VoiceRecorder = ({
               </button>
               
               <button
+                type="button"
                 onClick={resetRecording}
                 className="text-red-600 hover:text-red-800 px-3 py-2"
               >

@@ -190,6 +190,33 @@ const issueSchema = new mongoose.Schema({
     default: 0,
   },
   aiAnalysis: {
+    validationScore: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    validationDetails: {
+      titleQuality: {
+        score: Number,
+        isMeaningful: Boolean,
+        issue: String
+      },
+      descriptionQuality: {
+        score: Number,
+        isMeaningful: Boolean,
+        issue: String
+      },
+      imageValidation: {
+        score: Number,
+        matchesDescription: Boolean,
+        isAuthentic: Boolean,
+        issue: String
+      },
+      contentConsistency: {
+        score: Number,
+        isConsistent: Boolean
+      }
+    },
     score: {
       type: Number,
       min: 0,
