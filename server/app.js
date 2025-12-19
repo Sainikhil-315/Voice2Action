@@ -45,7 +45,8 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:3001',
       'http://127.0.0.1:3000',
-      'https://voice2action-steel.vercel.app'
+      'https://voice2action-steel.vercel.app',
+      'http://192.168.137.35:5000',
       // Add your production frontend URL here after Vercel deployment
       // Example: 'https://voice2action.vercel.app'
     ];

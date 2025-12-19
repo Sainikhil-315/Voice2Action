@@ -1,0 +1,284 @@
+import axios from 'axios';
+import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const getBaseURL = () => {
+  // In production, use environment variable
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.REACT_APP_API_URL || 'https://voice2action-api.onrender.com/api';
+  }
+  // In development, use localhost
+  return 'http://192.168.137.35:5000/api';
+};
+
+// Create axios instance
+const api = axios.create({
+  baseURL: 'http://192.168.137.35:5000/api',
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Request interceptor
+// Make request interceptor async for AsyncStorage
+api.interceptors.request.use(
+  async (config) => {
+    try {
+      // Add auth token if available
+      const token = await AsyncStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (e) {
+      console.error('Error getting token from AsyncStorage:', e);
+    }
+    // Add timestamp for cache busting if needed
+    if (config.method === 'get' && config.cacheBust) {
+      config.params = {
+        ...config.params,
+        _t: Date.now()
+      };
+    }
+    console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+    return response;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+    console.error(`❌ API Error: ${originalRequest?.method?.toUpperCase()} ${originalRequest?.url} - ${error.response?.status || 'Network Error'}`);
+    // Handle different error scenarios
+    if (error.response) {
+      const { status, data } = error.response;
+      switch (status) {
+        case 401:
+          // Unauthorized - clear token
+          if (!originalRequest._retry) {
+            originalRequest._retry = true;
+            await AsyncStorage.removeItem('token');
+            Toast.show({ type: 'error', text1: 'Session expired. Please login again.' });
+            // Optionally, you can trigger a navigation to login screen here if needed
+          }
+          break;
+        case 403:
+          Toast.show({ type: 'error', text1: 'Access denied. You don\'t have permission for this action.' });
+          break;
+        case 404:
+          Toast.show({ type: 'error', text1: 'Resource not found.' });
+          break;
+        case 429:
+          Toast.show({ type: 'error', text1: 'Too many requests. Please try again later.' });
+          break;
+        case 500:
+          Toast.show({ type: 'error', text1: 'Server error. Please try again later.' });
+          break;
+        case 503:
+          Toast.show({ type: 'error', text1: 'Service temporarily unavailable.' });
+          break;
+        default:
+          // Show specific error message from server if available
+          const message = data?.message || `Request failed with status ${status}`;
+          Toast.show({ type: 'error', text1: message });
+      }
+    } else if (error.request) {
+      // Network error
+      Toast.show({ type: 'error', text1: 'Network error. Please check your connection.' });
+    } else {
+      // Other errors
+      Toast.show({ type: 'error', text1: 'An unexpected error occurred.' });
+    }
+    return Promise.reject(error);
+  }
+);
+
+// API utility functions
+export const apiUtils = {
+  // Generic GET request with caching support
+  get: async (url, options = {}) => {
+    try {
+      const response = await api.get(url, options);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Generic POST request
+  post: async (url, data, options = {}) => {
+    try {
+      const response = await api.post(url, data, options);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Generic PUT request
+  put: async (url, data, options = {}) => {
+    try {
+      const response = await api.put(url, data, options);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Generic DELETE request
+  delete: async (url, options = {}) => {
+    try {
+      const response = await api.delete(url, options);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // File upload with progress
+  uploadFile: async (url, formData, onProgress) => {
+    try {
+      const response = await api.post(url, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress: onProgress
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Retry mechanism for failed requests
+  retry: async (requestFn, maxRetries = 3, delay = 1000) => {
+    let lastError;
+    
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await requestFn();
+      } catch (error) {
+        lastError = error;
+        
+        if (i < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+        }
+      }
+    }
+    
+    throw lastError;
+  }
+};
+
+// Specific API endpoints
+export const authAPI = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  register: (userData) => api.post('/auth/register', userData),
+  logout: () => api.post('/auth/logout'),
+  getProfile: () => api.get('/auth/me'),
+  updateProfile: (data) => api.put('/auth/profile', data),
+  uploadAvatar: (formData) => api.post('/auth/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  changePassword: (data) => api.put('/auth/change-password', data),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, password) => api.post(`/auth/reset-password/${token}`, { password }),
+  
+  // Two-Factor Authentication methods
+  setup2FA: () => api.post('/auth/2fa/setup'),
+  verify2FA: (data) => api.post('/auth/2fa/verify', data),
+  disable2FA: () => api.post('/auth/2fa/disable'),
+  get2FABackupCodes: () => api.get('/auth/2fa/backup-codes'),
+  regenerateBackupCodes: () => api.post('/auth/2fa/regenerate-backup-codes'),
+  verify2FALogin: (data) => api.post('/auth/2fa/verify-login', data)
+};
+
+// Notification API
+export const getNotificationsAPI = () => api.get('/notifications');
+export const markNotificationReadAPI = (id) => api.patch(`/notifications/${id}/read`);
+export const markAllNotificationsReadAPI = () => api.patch('/notifications/read-all');
+export const deleteNotificationAPI = (id) => api.delete(`/notifications/${id}`);
+
+export const issuesAPI = {
+  getAll: (params) => api.get('/issues', { params }),
+  getNearby: (params) => api.get('/issues/nearby', { params }),
+  getById: (id) => api.get(`/issues/${id}`),
+  create: (formData) => api.post('/issues', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  update: (id, data) => api.put(`/issues/${id}`, data),
+  delete: (id) => api.delete(`/issues/${id}`),
+  addComment: (id, comment) => api.post(`/issues/${id}/comments`, comment),
+  upvote: (id) => api.post(`/issues/${id}/upvote`),
+  getMyIssues: (params) => api.get('/issues/my/issues', { params }),
+  getStats: () => api.get('/issues/stats/overview'),
+  search: (params) => api.get('/issues/search/text', { params }),
+  deleteComment: (issueId, commentId) => api.delete(`/issues/${issueId}/comments/${commentId}`),
+  getViews: (issueId) => api.get(`/issues/${issueId}/views`),
+};
+
+export const adminAPI = {
+  getDashboard: () => api.get('/admin/dashboard'),
+  getPendingIssues: (params) => api.get('/admin/issues/pending', { params }),
+  updateIssueStatus: (id, data) => api.put(`/admin/issues/${id}/status`, data),
+  bulkUpdateIssues: (data) => api.post('/admin/issues/bulk', data),
+  getAnalytics: (params) => api.get('/admin/analytics', { params }),
+  getUsers: (params) => api.get('/admin/users', { params }),
+  updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  exportData: (params) => api.get('/admin/export', { params }),
+  sendAnnouncement: (data) => api.post('/admin/announcement', data),
+  getSystemHealth: () => api.get('/admin/system/health')
+};
+
+export const authoritiesAPI = {
+  getAll: (params) => api.get('/authorities', { params }),
+  getById: (id) => api.get(`/authorities/${id}`),
+  create: (data) => api.post('/authorities', data),
+  update: (id, data) => api.put(`/authorities/${id}`, data),
+  delete: (id) => api.delete(`/authorities/${id}`),
+  getIssues: (id, params) => api.get(`/authorities/${id}/issues`, { params }),
+  updateIssueStatus: (id, issueId, data, token) => 
+    api.put(`/authorities/${id}/issues/${issueId}`, data, { headers: { Authorization: `Bearer ${token}` }}),
+  getMetrics: (id, params) => api.get(`/authorities/${id}/metrics`, { params }),
+  getByDepartment: (department) => api.get(`/authorities/department/${department}`),
+  findByLocation: (data) => api.post('/authorities/find-by-location', data),
+  getStats: () => api.get('/authorities/stats/overview'),
+  requestOtp: ({ email }) => api.post('/authorities/login/request-otp', { email }),
+  verifyOtp: ({ email, otp }) => api.post('/authorities/login/verify-otp', { email, otp }),
+  getAssignedIssues: (authorityId, token) =>
+    api.get(`/authorities/${authorityId}/issues`, {
+      headers: { Authorization: `Bearer ${token}` }
+    }),
+  resolveIssue: (authorityId, issueId, token) =>
+    api.put(`/authorities/${authorityId}/issues/${issueId}`, { status: 'resolved' }, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+};
+
+export const leaderboardAPI = {
+  getMonthly: (params) => api.get('/leaderboard/monthly', { params }),
+  getYearly: (params) => api.get('/leaderboard/yearly', { params }),
+  getByCategory: (params) => api.get('/leaderboard/category', { params }),
+  getUserHistory: (userId, params) => api.get(`/leaderboard/user/${userId}`, { params }),
+  getStats: () => api.get('/leaderboard/stats'),
+  getAchievements: () => api.get('/leaderboard/achievements'),
+  getImpact: (params) => api.get('/leaderboard/impact', { params })
+};
+
+// Simple feedback API methods
+export const feedbackAPI = {
+  submit: (data) => api.post('/feedback', data),
+  getAll: (params) => api.get('/feedback', { params })
+};
+
+export default api;
