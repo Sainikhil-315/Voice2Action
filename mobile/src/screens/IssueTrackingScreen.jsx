@@ -1,5 +1,5 @@
-// src/screens/IssueTrackingScreen.js
-import React, { useState, useEffect } from 'react';
+// mobile/src/screens/IssueTrackingScreen.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,13 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { issuesAPI } from '../utils/api';
 import { ISSUE_CATEGORIES, ISSUE_STATUS } from '../utils/constants';
+import { formatRelativeTime, getCategoryInfo } from '../utils/helpers';
+import Toast from 'react-native-toast-message';
 
 const IssueTrackingScreen = ({ navigation }) => {
   const [issues, setIssues] = useState([]);
@@ -23,15 +26,18 @@ const IssueTrackingScreen = ({ navigation }) => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  useEffect(() => {
-    loadIssues(true);
-  }, [searchQuery, selectedCategory, selectedStatus]);
-
-  const loadIssues = async (reset = false) => {
-    if (loading) return;
+  const loadIssues = useCallback(async (reset = false) => {
+    if (loading || loadingMore) return;
     
-    setLoading(true);
+    if (reset) {
+      setLoading(true);
+      setPage(1);
+    } else {
+      setLoadingMore(true);
+    }
+
     try {
       const currentPage = reset ? 1 : page;
       const params = {
@@ -42,8 +48,8 @@ const IssueTrackingScreen = ({ navigation }) => {
         status: selectedStatus,
       };
 
-      const response = await issuesAPI.getAll(params);
-      const newIssues = response.data.data.issues || [];
+      const response = await issuesAPI.getMyIssues(params);
+      const newIssues = response.data?.data?.issues || [];
       
       if (reset) {
         setIssues(newIssues);
@@ -56,15 +62,31 @@ const IssueTrackingScreen = ({ navigation }) => {
       setHasMore(newIssues.length === 10);
     } catch (error) {
       console.error('Failed to load issues:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to load issues',
+        text2: error.response?.data?.message || 'Please try again',
+      });
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
-  };
+  }, [loading, loadingMore, page, searchQuery, selectedCategory, selectedStatus, issues]);
+
+  useEffect(() => {
+    loadIssues(true);
+  }, [searchQuery, selectedCategory, selectedStatus]);
 
   const onRefresh = () => {
     setRefreshing(true);
     loadIssues(true);
+  };
+
+  const handleLoadMore = () => {
+    if (hasMore && !loading && !loadingMore) {
+      loadIssues(false);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -77,75 +99,83 @@ const IssueTrackingScreen = ({ navigation }) => {
         return '#3b82f6';
       case 'pending':
         return '#6b7280';
+      case 'rejected':
+        return '#ef4444';
       default:
         return '#6b7280';
     }
   };
 
-  const renderIssueCard = ({ item }) => (
-    <TouchableOpacity
-      style={styles.issueCard}
-      onPress={() => navigation.navigate('IssueDetail', { id: item._id })}
-    >
-      <View style={styles.issueHeader}>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryIcon}>
-            {ISSUE_CATEGORIES.find(c => c.value === item.category)?.icon || '📋'}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(item.status) + '20' },
-          ]}
-        >
-          <Text
+  const renderIssueCard = ({ item }) => {
+    const categoryInfo = getCategoryInfo(item.category);
+    
+    return (
+      <TouchableOpacity
+        style={styles.issueCard}
+        onPress={() => navigation.navigate('IssueDetail', { id: item._id })}
+      >
+        <View style={styles.issueHeader}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryIcon}>{categoryInfo.icon}</Text>
+          </View>
+          <View
             style={[
-              styles.statusText,
-              { color: getStatusColor(item.status) },
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(item.status) + '20' },
             ]}
           >
-            {item.status.replace('_', ' ')}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={styles.issueTitle} numberOfLines={2}>
-        {item.title}
-      </Text>
-      <Text style={styles.issueDescription} numberOfLines={3}>
-        {item.description}
-      </Text>
-
-      <View style={styles.issueFooter}>
-        <View style={styles.issueStats}>
-          <Icon name="map-marker" size={14} color="#6b7280" />
-          <Text style={styles.issueStatText} numberOfLines={1}>
-            {item.location?.address || 'Location not specified'}
-          </Text>
-        </View>
-        <View style={styles.issueMetrics}>
-          <View style={styles.metricItem}>
-            <Icon name="thumb-up-outline" size={14} color="#6b7280" />
-            <Text style={styles.metricText}>{item.upvoteCount || 0}</Text>
-          </View>
-          <View style={styles.metricItem}>
-            <Icon name="comment-outline" size={14} color="#6b7280" />
-            <Text style={styles.metricText}>{item.commentCount || 0}</Text>
+            <Text
+              style={[
+                styles.statusText,
+                { color: getStatusColor(item.status) },
+              ]}
+            >
+              {item.status.replace('_', ' ')}
+            </Text>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+
+        <Text style={styles.issueTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+        <Text style={styles.issueDescription} numberOfLines={3}>
+          {item.description}
+        </Text>
+
+        <View style={styles.issueFooter}>
+          <View style={styles.issueStats}>
+            <Icon name="location" size={14} color="#6b7280" />
+            <Text style={styles.issueStatText} numberOfLines={1}>
+              {item.location?.address || 'Location not specified'}
+            </Text>
+          </View>
+          <View style={styles.issueMetrics}>
+            <View style={styles.metricItem}>
+              <Icon name="thumbs-up-outline" size={14} color="#6b7280" />
+              <Text style={styles.metricText}>{item.upvoteCount || 0}</Text>
+            </View>
+            <View style={styles.metricItem}>
+              <Icon name="chatbox-outline" size={14} color="#6b7280" />
+              <Text style={styles.metricText}>{item.commentCount || 0}</Text>
+            </View>
+          </View>
+        </View>
+        
+        <Text style={styles.issueTime}>
+          {formatRelativeTime(item.createdAt)}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   const renderHeader = () => (
     <View style={styles.header}>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Icon name="magnify" size={20} color="#6b7280" style={styles.searchIcon} />
+        <Icon name="search" size={20} color="#6b7280" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search issues..."
+          placeholder="Search your issues..."
           placeholderTextColor="#9ca3af"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -159,30 +189,89 @@ const IssueTrackingScreen = ({ navigation }) => {
 
       {/* Filters */}
       <View style={styles.filtersContainer}>
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Category:</Text>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => {/* Show category picker modal */}}
-          >
-            <Text style={styles.filterButtonText}>
-              {selectedCategory || 'All'}
-            </Text>
-            <Icon name="chevron-down" size={16} color="#6b7280" />
-          </TouchableOpacity>
+        {/* Category Filter */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Category</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                !selectedCategory && styles.filterChipActive,
+              ]}
+              onPress={() => setSelectedCategory('')}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  !selectedCategory && styles.filterChipTextActive,
+                ]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            {ISSUE_CATEGORIES.slice(0, 5).map((cat) => (
+              <TouchableOpacity
+                key={cat.value}
+                style={[
+                  styles.filterChip,
+                  selectedCategory === cat.value && styles.filterChipActive,
+                ]}
+                onPress={() => setSelectedCategory(cat.value)}
+              >
+                <Text style={styles.filterChipIcon}>{cat.icon}</Text>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    selectedCategory === cat.value && styles.filterChipTextActive,
+                  ]}
+                >
+                  {cat.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Status:</Text>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => {/* Show status picker modal */}}
-          >
-            <Text style={styles.filterButtonText}>
-              {selectedStatus || 'All'}
-            </Text>
-            <Icon name="chevron-down" size={16} color="#6b7280" />
-          </TouchableOpacity>
+        {/* Status Filter */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Status</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                !selectedStatus && styles.filterChipActive,
+              ]}
+              onPress={() => setSelectedStatus('')}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  !selectedStatus && styles.filterChipTextActive,
+                ]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            {ISSUE_STATUS.map((status) => (
+              <TouchableOpacity
+                key={status.value}
+                style={[
+                  styles.filterChip,
+                  selectedStatus === status.value && styles.filterChipActive,
+                ]}
+                onPress={() => setSelectedStatus(status.value)}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    selectedStatus === status.value && styles.filterChipTextActive,
+                  ]}
+                >
+                  {status.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         {(selectedCategory || selectedStatus) && (
@@ -193,6 +282,7 @@ const IssueTrackingScreen = ({ navigation }) => {
               setSelectedStatus('');
             }}
           >
+            <Icon name="close-circle" size={16} color="#ef4444" />
             <Text style={styles.clearFiltersText}>Clear Filters</Text>
           </TouchableOpacity>
         )}
@@ -202,18 +292,26 @@ const IssueTrackingScreen = ({ navigation }) => {
 
   const renderEmpty = () => (
     <View style={styles.emptyState}>
-      <Icon name="alert-circle-outline" size={64} color="#d1d5db" />
+      <Icon name="file-tray-outline" size={64} color="#d1d5db" />
       <Text style={styles.emptyStateTitle}>No Issues Found</Text>
       <Text style={styles.emptyStateText}>
         {searchQuery || selectedCategory || selectedStatus
           ? 'Try adjusting your filters'
-          : 'Be the first to report an issue'}
+          : 'Start by reporting your first issue'}
       </Text>
+      {!searchQuery && !selectedCategory && !selectedStatus && (
+        <TouchableOpacity
+          style={styles.emptyStateButton}
+          onPress={() => navigation.navigate('IssueForm')}
+        >
+          <Text style={styles.emptyStateButtonText}>Report Issue</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
   const renderFooter = () => {
-    if (!loading || refreshing) return null;
+    if (!loadingMore) return null;
     return (
       <View style={styles.footerLoader}>
         <ActivityIndicator size="small" color="#2563eb" />
@@ -224,12 +322,12 @@ const IssueTrackingScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <Text style={styles.title}>Community Issues</Text>
+        <Text style={styles.title}>My Issues</Text>
         <TouchableOpacity
-          style={styles.mapButton}
-          onPress={() => {/* Navigate to map view */}}
+          style={styles.addButton}
+          onPress={() => navigation.navigate('IssueForm')}
         >
-          <Icon name="map" size={24} color="#2563eb" />
+          <Icon name="add" size={24} color="#ffffff" />
         </TouchableOpacity>
       </View>
 
@@ -243,12 +341,17 @@ const IssueTrackingScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        onEndReached={() => {
-          if (hasMore && !loading) loadIssues(false);
-        }}
+        onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         contentContainerStyle={issues.length === 0 ? styles.emptyContainer : null}
       />
+
+      {loading && issues.length === 0 && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2563eb" />
+          <Text style={styles.loadingText}>Loading issues...</Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -274,11 +377,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1f2937',
   },
-  mapButton: {
+  addButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#2563eb',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -304,42 +407,53 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   filtersContainer: {
-    gap: 12,
+    gap: 16,
   },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  filterSection: {
+    gap: 8,
   },
   filterLabel: {
     fontSize: 14,
     fontWeight: '500',
     color: '#374151',
-    width: 70,
   },
-  filterButton: {
-    flex: 1,
+  filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#f9fafb',
-    paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  filterButtonText: {
+  filterChipActive: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#2563eb',
+  },
+  filterChipIcon: {
     fontSize: 14,
-    color: '#1f2937',
+    marginRight: 4,
+  },
+  filterChipText: {
+    fontSize: 13,
+    color: '#374151',
+  },
+  filterChipTextActive: {
+    color: '#2563eb',
+    fontWeight: '600',
   },
   clearFiltersButton: {
-    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
     paddingVertical: 8,
   },
   clearFiltersText: {
     fontSize: 14,
-    color: '#2563eb',
+    color: '#ef4444',
     fontWeight: '500',
   },
   issueCard: {
@@ -398,6 +512,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#f3f4f6',
+    marginBottom: 8,
   },
   issueStats: {
     flex: 1,
@@ -423,6 +538,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6b7280',
   },
+  issueTime: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
   emptyContainer: {
     flexGrow: 1,
   },
@@ -443,10 +562,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
+    paddingHorizontal: 40,
+    marginBottom: 16,
+  },
+  emptyStateButton: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  emptyStateButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   footerLoader: {
     paddingVertical: 20,
     alignItems: 'center',
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(249, 250, 251, 0.8)',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6b7280',
   },
 });
 

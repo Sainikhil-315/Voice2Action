@@ -1,4 +1,4 @@
-// App.js
+// App.js - FIXED VERSION
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -21,6 +21,7 @@ import IssueDetailScreen from './src/screens/IssueDetailScreen';
 import IssueFormScreen from './src/screens/IssueFormScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
+import NotificationScreen from './src/screens/NotificationScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -32,27 +33,27 @@ const MainTabs = () => {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
-          
+
           switch (route.name) {
             case 'Dashboard':
-              iconName = focused ? 'view-dashboard' : 'view-dashboard-outline';
+              iconName = focused ? 'grid' : 'grid-outline';
               break;
             case 'Issues':
               iconName = focused ? 'alert-circle' : 'alert-circle-outline';
               break;
             case 'Report':
-              iconName = 'plus-circle';
+              iconName = focused ? 'add-circle' : 'add-circle-outline';
               break;
             case 'Leaderboard':
               iconName = focused ? 'trophy' : 'trophy-outline';
               break;
             case 'Profile':
-              iconName = focused ? 'account' : 'account-outline';
+              iconName = focused ? 'person' : 'person-outline';
               break;
             default:
               iconName = 'circle';
           }
-          
+
           return <Icon name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: '#2563eb',
@@ -67,31 +68,16 @@ const MainTabs = () => {
     >
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Issues" component={IssueTrackingScreen} />
-      <Tab.Screen 
-        name="Report" 
+      <Tab.Screen
+        name="Report"
         component={IssueFormScreen}
         options={{
-          tabBarButton: (props) => (
-            <Icon.Button
-              {...props}
-              name="plus-circle"
-              backgroundColor="#2563eb"
-              size={32}
-              style={{
-                marginTop: -20,
-                borderRadius: 32,
-                height: 64,
-                width: 64,
-                justifyContent: 'center',
-                alignItems: 'center',
-                elevation: 4,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.25,
-                shadowRadius: 4,
-              }}
-            />
+          tabBarIcon: ({ color }) => (
+            <Icon name="add-circle" size={56} color="#2563eb" />
           ),
+          tabBarIconStyle: {
+            marginTop: -20,
+          },
         }}
       />
       <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
@@ -111,6 +97,9 @@ const AuthStack = () => {
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      {/* <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="IssueForm" component={IssueFormScreen} />
+      <Stack.Screen name="IssueTracking" component={IssueTrackingScreen} /> */}
     </Stack.Navigator>
   );
 };
@@ -118,11 +107,11 @@ const AuthStack = () => {
 // Main App Navigator
 const AppNavigator = () => {
   const { isAuthenticated, loading } = useAuth();
-  
+
   if (loading) {
     return null; // You can add a splash screen here
   }
-  
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -133,6 +122,9 @@ const AppNavigator = () => {
         <>
           <Stack.Screen name="MainTabs" component={MainTabs} />
           <Stack.Screen name="IssueDetail" component={IssueDetailScreen} />
+          <Stack.Screen name="Notifications" component={NotificationScreen} />
+          <Stack.Screen name="IssueForm" component={IssueFormScreen} />
+          <Stack.Screen name="IssueTracking" component={IssueTrackingScreen} />
         </>
       ) : (
         <Stack.Screen name="Auth" component={AuthStack} />
@@ -147,10 +139,7 @@ const App = () => {
       <SocketProvider>
         <NotificationProvider>
           <NavigationContainer>
-            <StatusBar 
-              barStyle="dark-content" 
-              backgroundColor="#ffffff"
-            />
+            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
             <AppNavigator />
           </NavigationContainer>
         </NotificationProvider>

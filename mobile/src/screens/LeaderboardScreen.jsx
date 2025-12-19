@@ -51,12 +51,12 @@ const LeaderboardScreen = () => {
                 <Image source={{ uri: top3[1].user.avatar }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Icon name="account" size={24} color="#9ca3af" />
+                  <Icon name="person" size={24} color="#9ca3af" />
                 </View>
               )}
             </View>
             <View style={styles.podiumRank}>
-              <Icon name="medal" size={20} color={getTrophyColor(2)} />
+              <Icon name="trophy" size={20} color={getTrophyColor(2)} />
             </View>
             <Text style={styles.podiumName} numberOfLines={1}>
               {top3[1].user?.name || 'User'}
@@ -72,12 +72,12 @@ const LeaderboardScreen = () => {
                 <Image source={{ uri: top3[0].user.avatar }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Icon name="account" size={28} color="#fbbf24" />
+                  <Icon name="person" size={28} color="#fbbf24" />
                 </View>
               )}
             </View>
             <View style={styles.podiumRank}>
-              <Icon name="crown" size={24} color={getTrophyColor(1)} />
+              <Icon name="ribbon" size={24} color={getTrophyColor(1)} />
             </View>
             <Text style={styles.podiumName} numberOfLines={1}>
               {top3[0].user?.name || 'User'}
@@ -93,12 +93,12 @@ const LeaderboardScreen = () => {
                 <Image source={{ uri: top3[2].user.avatar }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Icon name="account" size={24} color="#9ca3af" />
+                  <Icon name="person" size={24} color="#9ca3af" />
                 </View>
               )}
             </View>
             <View style={styles.podiumRank}>
-              <Icon name="medal" size={20} color={getTrophyColor(3)} />
+              <Icon name="trophy" size={20} color={getTrophyColor(3)} />
             </View>
             <Text style={styles.podiumName} numberOfLines={1}>
               {top3[2].user?.name || 'User'}
@@ -121,7 +121,7 @@ const LeaderboardScreen = () => {
             <Image source={{ uri: item.user.avatar }} style={styles.leaderAvatar} />
           ) : (
             <View style={styles.leaderAvatarPlaceholder}>
-              <Icon name="account" size={20} color="#9ca3af" />
+              <Icon name="person" size={20} color="#9ca3af" />
             </View>
           )}
           <View style={styles.leaderInfo}>

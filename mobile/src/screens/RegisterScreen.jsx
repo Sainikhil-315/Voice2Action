@@ -120,7 +120,7 @@ const RegisterScreen = ({ navigation }) => {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Full Name *</Text>
             <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
-              <Icon name="account-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <Icon name="person-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your full name"

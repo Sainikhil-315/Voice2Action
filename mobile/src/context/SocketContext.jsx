@@ -83,19 +83,29 @@ export const SocketProvider = ({ children }) => {
         console.log("⚠️ Socket disconnected:", reason);
         setIsConnected(false);
 
-        if (reason === "io server disconnect") {
+        // Attempt reconnection for any disconnect reason
+        if (reconnectAttempts.current < maxReconnectAttempts) {
+          reconnectAttempts.current++;
           setTimeout(() => {
-            if (reconnectAttempts.current < maxReconnectAttempts) {
-              reconnectAttempts.current++;
-              newSocket.connect();
-            }
+            console.log(`🔄 Attempting socket reconnect #${reconnectAttempts.current}`);
+            newSocket.connect();
           }, 1000 * reconnectAttempts.current);
+        } else {
+          console.warn('❌ Max socket reconnect attempts reached');
         }
       });
 
       newSocket.on("connect_error", (err) => {
         console.error("❌ Socket connection error:", err);
         setIsConnected(false);
+        // Try to reconnect if not maxed out
+        if (reconnectAttempts.current < maxReconnectAttempts) {
+          reconnectAttempts.current++;
+          setTimeout(() => {
+            console.log(`🔄 Attempting socket reconnect after error #${reconnectAttempts.current}`);
+            newSocket.connect();
+          }, 1000 * reconnectAttempts.current);
+        }
       });
 
       // Attach listeners

@@ -26,9 +26,9 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const menuItems = [
-    { icon: 'account-edit', label: 'Edit Profile', onPress: () => {} },
-    { icon: 'bell', label: 'Notifications', onPress: () => {} },
-    { icon: 'shield-check', label: 'Privacy & Security', onPress: () => {} },
+    { icon: 'create', label: 'Edit Profile', onPress: () => {} },
+    { icon: 'notifications', label: 'Notifications', onPress: () => {} },
+    { icon: 'shield-checkmark', label: 'Privacy & Security', onPress: () => {} },
     { icon: 'help-circle', label: 'Help & Support', onPress: () => {} },
     { icon: 'information', label: 'About', onPress: () => {} },
   ];
@@ -45,7 +45,7 @@ const ProfileScreen = ({ navigation }) => {
             <Image source={{ uri: user.avatar }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Icon name="account" size={48} color="#9ca3af" />
+              <Icon name="person" size={48} color="#9ca3af" />
             </View>
           )}
           <TouchableOpacity style={styles.avatarEditButton}>
@@ -93,7 +93,7 @@ const ProfileScreen = ({ navigation }) => {
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Icon name="logout" size={20} color="#ef4444" />
+        <Icon name="log-out" size={20} color="#ef4444" />
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
 

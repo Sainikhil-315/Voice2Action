@@ -93,7 +93,7 @@ const IssueDetailScreen = ({ route, navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Issue Details</Text>
         <TouchableOpacity style={styles.shareButton}>
-          <Icon name="share-variant" size={24} color="#1f2937" />
+          <Icon name="share-social" size={24} color="#1f2937" />
         </TouchableOpacity>
       </View>
 
@@ -130,7 +130,7 @@ const IssueDetailScreen = ({ route, navigation }) => {
             <Text style={styles.actionText}>{issue.upvoteCount || 0}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton}>
-            <Icon name="comment-outline" size={24} color="#6b7280" />
+            <Icon name="chatbubble-outline" size={24} color="#6b7280" />
             <Text style={styles.actionText}>{issue.commentCount || 0}</Text>
           </TouchableOpacity>
         </View>

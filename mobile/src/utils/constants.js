@@ -12,7 +12,7 @@ export const APP_CONFIG = {
 
 // API Configuration
 export const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: 'http://localhost:5000/api',
   timeout: 30000,
   retryAttempts: 3,
   retryDelay: 1000
@@ -20,19 +20,19 @@ export const API_CONFIG = {
 
 // Issue Categories
 export const ISSUE_CATEGORIES = [
-  { value: 'road_maintenance', label: 'Road Maintenance', icon: '🚧', color: 'orange' },
-  { value: 'waste_management', label: 'Waste Management', icon: '🗑️', color: 'green' },
-  { value: 'water_supply', label: 'Water Supply', icon: '💧', color: 'blue' },
-  { value: 'electricity', label: 'Electricity', icon: '⚡', color: 'yellow' },
-  { value: 'fire_safety', label: 'Fire Safety', icon: '🔥', color: 'red' },
-  { value: 'public_transport', label: 'Public Transport', icon: '🚌', color: 'purple' },
-  { value: 'parks_recreation', label: 'Parks & Recreation', icon: '🌳', color: 'green' },
-  { value: 'street_lighting', label: 'Street Lighting', icon: '💡', color: 'yellow' },
-  { value: 'drainage', label: 'Drainage', icon: '🌊', color: 'blue' },
-  { value: 'noise_pollution', label: 'Noise Pollution', icon: '🔊', color: 'red' },
-  { value: 'illegal_construction', label: 'Illegal Construction', icon: '🏗️', color: 'orange' },
-  { value: 'animal_control', label: 'Animal Control', icon: '🐕', color: 'brown' },
-  { value: 'other', label: 'Other', icon: '📋', color: 'gray' }
+  { value: 'road_maintenance', label: 'Road Maintenance', icon: 'car-outline', color: 'orange' },
+  { value: 'waste_management', label: 'Waste Management', icon: 'trash-outline', color: 'green' },
+  { value: 'water_supply', label: 'Water Supply', icon: 'water-outline', color: 'blue' },
+  { value: 'electricity', label: 'Electricity', icon: 'flash-outline', color: 'yellow' },
+  { value: 'fire_safety', label: 'Fire Safety', icon: 'flame-outline', color: 'red' },
+  { value: 'public_transport', label: 'Public Transport', icon: 'bus-outline', color: 'purple' },
+  { value: 'parks_recreation', label: 'Parks & Recreation', icon: 'leaf-outline', color: 'green' },
+  { value: 'street_lighting', label: 'Street Lighting', icon: 'bulb-outline', color: 'yellow' },
+  { value: 'drainage', label: 'Drainage', icon: 'rainy-outline', color: 'blue' },
+  { value: 'noise_pollution', label: 'Noise Pollution', icon: 'volume-high-outline', color: 'red' },
+  { value: 'illegal_construction', label: 'Illegal Construction', icon: 'construct-outline', color: 'orange' },
+  { value: 'animal_control', label: 'Animal Control', icon: 'paw-outline', color: 'brown' },
+  { value: 'other', label: 'Other', icon: 'list-outline', color: 'gray' }
 ];
 
 // Issue Status

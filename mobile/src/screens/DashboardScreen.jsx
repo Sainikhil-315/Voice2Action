@@ -1,5 +1,5 @@
-// src/screens/DashboardScreen.js
-import React, { useState, useEffect } from 'react';
+// mobile/src/screens/DashboardScreen.jsx
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,43 +8,66 @@ import {
   TouchableOpacity,
   RefreshControl,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { issuesAPI, leaderboardAPI } from '../utils/api';
-import { formatNumber } from '../utils/helpers';
+import { formatNumber, formatRelativeTime } from '../utils/helpers';
+import Toast from 'react-native-toast-message';
 
 const { width } = Dimensions.get('window');
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const { unreadCount } = useNotifications();
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState(null);
   const [recentIssues, setRecentIssues] = useState([]);
   const [userRank, setUserRank] = useState(null);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  const loadDashboardData = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
 
-  const loadDashboardData = async () => {
-    setLoading(true);
     try {
+      // Fetch all data in parallel
       const [statsRes, issuesRes, rankRes] = await Promise.all([
         issuesAPI.getStats(),
-        issuesAPI.getMyIssues({ limit: 5 }),
+        issuesAPI.getMyIssues({ limit: 5, sort: '-createdAt' }),
         leaderboardAPI.getUserHistory(user.id),
       ]);
 
-      setStats(statsRes.data);
-      setRecentIssues(issuesRes.data.data.issues || []);
-      setUserRank(rankRes.data.data);
+      // Extract data properly based on API response structure
+      const statsData = statsRes.data?.data || statsRes.data;
+      const issuesData = issuesRes.data?.data?.issues || [];
+      const rankData = rankRes.data?.data || rankRes.data;
+
+      setStats(statsData);
+      setRecentIssues(issuesData);
+      setUserRank(rankData);
     } catch (error) {
       console.error('Failed to load dashboard:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to load dashboard',
+        text2: error.response?.data?.message || 'Please try again',
+      });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  }, [user.id]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadDashboardData(true);
   };
 
   const getStatusColor = (status) => {
@@ -64,16 +87,16 @@ const DashboardScreen = ({ navigation }) => {
 
   const quickActions = [
     {
-      icon: 'plus-circle',
+      icon: 'add-circle',
       label: 'Report Issue',
       color: '#2563eb',
-      onPress: () => navigation.navigate('Report'),
+      onPress: () => navigation.navigate('IssueForm'),
     },
     {
-      icon: 'alert-circle',
+      icon: 'list',
       label: 'My Issues',
       color: '#f59e0b',
-      onPress: () => navigation.navigate('Issues'),
+      onPress: () => navigation.navigate('IssueTracking'),
     },
     {
       icon: 'trophy',
@@ -82,18 +105,27 @@ const DashboardScreen = ({ navigation }) => {
       onPress: () => navigation.navigate('Leaderboard'),
     },
     {
-      icon: 'account',
+      icon: 'person',
       label: 'Profile',
       color: '#10b981',
       onPress: () => navigation.navigate('Profile'),
     },
   ];
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={loadDashboardData} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       {/* Header */}
@@ -102,41 +134,45 @@ const DashboardScreen = ({ navigation }) => {
           <Text style={styles.greeting}>Welcome back,</Text>
           <Text style={styles.userName}>{user?.name}</Text>
         </View>
-        <TouchableOpacity style={styles.notificationButton}>
-          <Icon name="bell-outline" size={24} color="#1f2937" />
-          <View style={styles.notificationBadge}>
-            <Text style={styles.notificationBadgeText}>3</Text>
-          </View>
+        <TouchableOpacity
+          style={styles.notificationButton}
+          onPress={() => navigation.navigate('Notifications')}
+        >
+          <Icon name="notifications-outline" size={24} color="#1f2937" />
+          {unreadCount > 0 && (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
       {/* Stats Cards */}
       {stats && (
         <View style={styles.statsContainer}>
-          <LinearGradient
-            colors={['#3b82f6', '#2563eb']}
-            style={styles.statCard}
-          >
+          <LinearGradient colors={['#3b82f6', '#2563eb']} style={styles.statCard}>
             <Icon name="alert-circle" size={32} color="#ffffff" />
-            <Text style={styles.statValue}>{stats.data.overview.total}</Text>
-            <Text style={styles.statLabel}>Total Issues</Text>
+            <Text style={styles.statValue}>
+              {formatNumber(userRank?.totalIssues || 0)}
+            </Text>
+            <Text style={styles.statLabel}>My Issues</Text>
           </LinearGradient>
 
-          <LinearGradient
-            colors={['#10b981', '#059669']}
-            style={styles.statCard}
-          >
-            <Icon name="check-circle" size={32} color="#ffffff" />
-            <Text style={styles.statValue}>{stats.data.overview.resolved}</Text>
+          <LinearGradient colors={['#10b981', '#059669']} style={styles.statCard}>
+            <Icon name="checkmark-circle" size={32} color="#ffffff" />
+            <Text style={styles.statValue}>
+              {formatNumber(userRank?.resolvedIssues || 0)}
+            </Text>
             <Text style={styles.statLabel}>Resolved</Text>
           </LinearGradient>
 
-          <LinearGradient
-            colors={['#f59e0b', '#d97706']}
-            style={styles.statCard}
-          >
-            <Icon name="clock-outline" size={32} color="#ffffff" />
-            <Text style={styles.statValue}>{stats.data.overview.pending}</Text>
+          <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.statCard}>
+            <Icon name="time" size={32} color="#ffffff" />
+            <Text style={styles.statValue}>
+              {formatNumber(stats?.overview?.pending || 0)}
+            </Text>
             <Text style={styles.statLabel}>Pending</Text>
           </LinearGradient>
         </View>
@@ -154,17 +190,21 @@ const DashboardScreen = ({ navigation }) => {
             </View>
             <View style={styles.rankInfo}>
               <Text style={styles.rankTitle}>Your Community Rank</Text>
-              <Text style={styles.rankValue}>#{userRank.rank}</Text>
+              <Text style={styles.rankValue}>#{userRank.rank || 'N/A'}</Text>
             </View>
           </View>
           <View style={styles.rankDetails}>
             <View style={styles.rankDetailItem}>
-              <Text style={styles.rankDetailValue}>{userRank.totalPoints}</Text>
+              <Text style={styles.rankDetailValue}>
+                {formatNumber(userRank.stats?.totalPoints || 0)}
+              </Text>
               <Text style={styles.rankDetailLabel}>Points</Text>
             </View>
             <View style={styles.rankDivider} />
             <View style={styles.rankDetailItem}>
-              <Text style={styles.rankDetailValue}>{userRank.totalIssues}</Text>
+              <Text style={styles.rankDetailValue}>
+                {formatNumber(userRank.totalIssues || 0)}
+              </Text>
               <Text style={styles.rankDetailLabel}>Issues</Text>
             </View>
           </View>
@@ -181,7 +221,12 @@ const DashboardScreen = ({ navigation }) => {
               style={styles.quickActionCard}
               onPress={action.onPress}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: action.color + '20' }]}>
+              <View
+                style={[
+                  styles.quickActionIcon,
+                  { backgroundColor: action.color + '20' },
+                ]}
+              >
                 <Icon name={action.icon} size={28} color={action.color} />
               </View>
               <Text style={styles.quickActionLabel}>{action.label}</Text>
@@ -194,7 +239,7 @@ const DashboardScreen = ({ navigation }) => {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent Issues</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Issues')}>
+          <TouchableOpacity onPress={() => navigation.navigate('IssueTracking')}>
             <Text style={styles.sectionLink}>View All</Text>
           </TouchableOpacity>
         </View>
@@ -202,10 +247,10 @@ const DashboardScreen = ({ navigation }) => {
         {recentIssues.length === 0 ? (
           <View style={styles.emptyState}>
             <Icon name="alert-circle-outline" size={48} color="#9ca3af" />
-            <Text style={styles.emptyStateText}>No issues reported yet</Text>
+            <Text style={styles.emptyStateText}>No issues yet</Text>
             <TouchableOpacity
               style={styles.emptyStateButton}
-              onPress={() => navigation.navigate('Report')}
+              onPress={() => navigation.navigate('IssueForm')}
             >
               <Text style={styles.emptyStateButtonText}>Report First Issue</Text>
             </TouchableOpacity>
@@ -216,7 +261,9 @@ const DashboardScreen = ({ navigation }) => {
               <TouchableOpacity
                 key={issue._id}
                 style={styles.issueCard}
-                onPress={() => navigation.navigate('IssueDetail', { id: issue._id })}
+                onPress={() =>
+                  navigation.navigate('IssueDetail', { id: issue._id })
+                }
               >
                 <View style={styles.issueHeader}>
                   <Text style={styles.issueTitle} numberOfLines={1}>
@@ -234,7 +281,7 @@ const DashboardScreen = ({ navigation }) => {
                         { color: getStatusColor(issue.status) },
                       ]}
                     >
-                      {issue.status}
+                      {issue.status.replace('_', ' ')}
                     </Text>
                   </View>
                 </View>
@@ -243,15 +290,19 @@ const DashboardScreen = ({ navigation }) => {
                 </Text>
                 <View style={styles.issueFooter}>
                   <View style={styles.issueStats}>
-                    <Icon name="thumb-up-outline" size={14} color="#6b7280" />
-                    <Text style={styles.issueStatText}>{issue.upvoteCount || 0}</Text>
+                    <Icon name="thumbs-up-outline" size={14} color="#6b7280" />
+                    <Text style={styles.issueStatText}>
+                      {issue.upvoteCount || 0}
+                    </Text>
                   </View>
                   <View style={styles.issueStats}>
-                    <Icon name="comment-outline" size={14} color="#6b7280" />
-                    <Text style={styles.issueStatText}>{issue.commentCount || 0}</Text>
+                    <Icon name="chatbox-outline" size={14} color="#6b7280" />
+                    <Text style={styles.issueStatText}>
+                      {issue.commentCount || 0}
+                    </Text>
                   </View>
                   <Text style={styles.issueDate}>
-                    {new Date(issue.createdAt).toLocaleDateString()}
+                    {formatRelativeTime(issue.createdAt)}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -259,6 +310,44 @@ const DashboardScreen = ({ navigation }) => {
           </View>
         )}
       </View>
+
+      {/* Community Impact */}
+      {stats && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Community Impact</Text>
+          <View style={styles.impactGrid}>
+            <View style={styles.impactCard}>
+              <View style={styles.impactIcon}>
+                <Icon name="people" size={32} color="#2563eb" />
+              </View>
+              <Text style={styles.impactValue}>
+                {formatNumber(stats.overview?.total || 0)}
+              </Text>
+              <Text style={styles.impactLabel}>Total Issues</Text>
+            </View>
+
+            <View style={styles.impactCard}>
+              <View style={styles.impactIcon}>
+                <Icon name="checkmark-done" size={32} color="#10b981" />
+              </View>
+              <Text style={styles.impactValue}>
+                {formatNumber(stats.overview?.resolved || 0)}
+              </Text>
+              <Text style={styles.impactLabel}>Resolved</Text>
+            </View>
+
+            <View style={styles.impactCard}>
+              <View style={styles.impactIcon}>
+                <Icon name="trending-up" size={32} color="#8b5cf6" />
+              </View>
+              <Text style={styles.impactValue}>
+                {stats.overview?.resolutionRate || 0}%
+              </Text>
+              <Text style={styles.impactLabel}>Success Rate</Text>
+            </View>
+          </View>
+        </View>
+      )}
     </ScrollView>
   );
 };
@@ -267,6 +356,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6b7280',
   },
   header: {
     flexDirection: 'row',
@@ -304,6 +404,7 @@ const styles = StyleSheet.create({
     height: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 4,
   },
   notificationBadgeText: {
     fontSize: 10,
@@ -521,6 +622,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9ca3af',
     marginLeft: 'auto',
+  },
+  impactGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  impactCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  impactIcon: {
+    marginBottom: 8,
+  },
+  impactValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  impactLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
 
