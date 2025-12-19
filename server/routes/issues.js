@@ -350,6 +350,9 @@ router.post('/', protect, handleMultipleUpload, async (req, res) => {
         validationDetails: geminiAnalysis.data.validationDetails,
         analyzedAt: new Date()
       },
+      geminiStatus: geminiAnalysis.data.isValid ? 'accepted' : 'rejected',
+      geminiReason: geminiAnalysis.data.rejectionReason || '',
+      expectedResolutionTime: geminiAnalysis.data.estimatedResolutionTime ? new Date(Date.now() + geminiAnalysis.data.estimatedResolutionTime * 60 * 60 * 1000) : null,
       timeline: [{
         action: 'submitted',
         timestamp: new Date(),

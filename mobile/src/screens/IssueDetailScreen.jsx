@@ -1,6 +1,3 @@
-// ============================================
-// src/screens/IssueDetailScreen.js
-// ============================================
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -18,6 +15,45 @@ import { issuesAPI } from '../utils/api';
 import { formatRelativeTime } from '../utils/helpers';
 
 const IssueDetailScreen = ({ route, navigation }) => {
+        // Add missing handleAddComment function
+        const handleAddComment = async () => {
+          if (!comment.trim()) return;
+          setCommenting(true);
+          try {
+            await issuesAPI.addComment(id, { message: comment });
+            setComment('');
+            loadIssue();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to add comment');
+          } finally {
+            setCommenting(false);
+          }
+        };
+      // Add missing handleUpvote function
+      const handleUpvote = async () => {
+        if (!issue) return;
+        try {
+          await issuesAPI.upvote(id);
+          setIssue(prev => ({
+            ...prev,
+            upvoteCount: (prev.upvoteCount || 0) + (prev.userHasUpvoted ? -1 : 1),
+            userHasUpvoted: !prev.userHasUpvoted,
+          }));
+        } catch (error) {
+          Alert.alert('Error', 'Failed to upvote');
+        }
+      };
+    // Add missing getStatusColor function
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 'resolved': return '#10b981';
+        case 'in_progress': return '#f59e0b';
+        case 'verified': return '#3b82f6';
+        case 'pending': return '#6b7280';
+        case 'rejected': return '#ef4444';
+        default: return '#6b7280';
+      }
+    };
   const { id } = route.params;
   const [issue, setIssue] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,34 +76,6 @@ const IssueDetailScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleUpvote = async () => {
-    try {
-      await issuesAPI.upvote(id);
-      setIssue({
-        ...issue,
-        upvoteCount: (issue.upvoteCount || 0) + (issue.userHasUpvoted ? -1 : 1),
-        userHasUpvoted: !issue.userHasUpvoted,
-      });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to upvote');
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!comment.trim()) return;
-    
-    setCommenting(true);
-    try {
-      await issuesAPI.addComment(id, { message: comment });
-      setComment('');
-      loadIssue();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add comment');
-    } finally {
-      setCommenting(false);
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -75,21 +83,22 @@ const IssueDetailScreen = ({ route, navigation }) => {
       </View>
     );
   }
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'resolved': return '#10b981';
-      case 'in_progress': return '#f59e0b';
-      case 'verified': return '#3b82f6';
-      default: return '#6b7280';
-    }
-  };
+  if (!issue) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.headerTitle}>Issue not found</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Text style={{ color: '#2563eb', marginTop: 16 }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-left" size={24} color="#1f2937" />
+          <Icon name="arrow-back" size={24} color="#1f2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Issue Details</Text>
         <TouchableOpacity style={styles.shareButton}>
@@ -101,13 +110,37 @@ const IssueDetailScreen = ({ route, navigation }) => {
         <View style={styles.issueHeader}>
           <Text style={styles.issueTitle}>{issue.title}</Text>
           <View style={styles.issueMeta}>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(issue.status) + '20' }]}>
-              <Text style={[styles.statusText, { color: getStatusColor(issue.status) }]}>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(issue.status) + '20' }]}> 
+              <Text style={[styles.statusText, { color: getStatusColor(issue.status) }]}> 
                 {issue.status.replace('_', ' ')}
               </Text>
             </View>
             <Text style={styles.issueDate}>{formatRelativeTime(issue.createdAt)}</Text>
           </View>
+        </View>
+
+        {/* Gemini Validation Info */}
+        {console.log("🔍 Issue Gemini Data:", issue)}
+        <View style={styles.geminiSection}>
+          <Text style={styles.geminiTitle}>Gemini Validation</Text>
+          <View style={styles.geminiRow}>
+            <Text style={styles.geminiLabel}>Status:</Text>
+            <Text style={styles.geminiValue}>
+              {issue.geminiStatus === 'accepted' ? '✅ Accepted' : issue.geminiStatus === 'rejected' ? '❌ Rejected' : 'N/A'}
+            </Text>
+          </View>
+          {issue.geminiReason ? (
+            <View style={styles.geminiRow}>
+              <Text style={styles.geminiLabel}>Reason:</Text>
+              <Text style={styles.geminiValue}>{issue.geminiReason}</Text>
+            </View>
+          ) : null}
+          {issue.expectedResolutionTime ? (
+            <View style={styles.geminiRow}>
+              <Text style={styles.geminiLabel}>Expected Resolution:</Text>
+              <Text style={styles.geminiValue}>{new Date(issue.expectedResolutionTime).toLocaleString()}</Text>
+            </View>
+          ) : null}
         </View>
 
         <Text style={styles.issueDescription}>{issue.description}</Text>
@@ -137,7 +170,6 @@ const IssueDetailScreen = ({ route, navigation }) => {
 
         <View style={styles.commentsSection}>
           <Text style={styles.commentsTitle}>Comments ({issue.comments?.length || 0})</Text>
-          
           <View style={styles.commentInput}>
             <TextInput
               style={styles.input}
@@ -173,10 +205,46 @@ const IssueDetailScreen = ({ route, navigation }) => {
       </ScrollView>
     </View>
   );
+// ...existing code...
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
+  geminiSection: {
+    backgroundColor: '#f3f4f6',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 10,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  geminiTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2563eb',
+    marginBottom: 8,
+  },
+  geminiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  geminiLabel: {
+    fontWeight: '600',
+    color: '#374151',
+    marginRight: 8,
+    fontSize: 14,
+    width: 120,
+  },
+  geminiValue: {
+    color: '#1f2937',
+    fontSize: 14,
+    flex: 1,
+    flexWrap: 'wrap',
+  },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',

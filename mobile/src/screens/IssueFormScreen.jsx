@@ -188,23 +188,23 @@ const IssueFormScreen = ({ navigation }) => {
       error => {
         console.error('Location error:', error);
         setLocationLoading(false);
-        let errorMsg = error.message;
+        let errorMsg = 'Unable to get location';
         if (error.code === 1) {
-          errorMsg = 'Location permission denied. Please allow location access in your device settings.';
+          errorMsg = 'Location permission denied';
         } else if (error.code === 2) {
-          errorMsg = 'Location unavailable. Make sure your device location is enabled.';
+          errorMsg = 'Location unavailable';
         } else if (error.code === 3) {
-          errorMsg = 'Location request timed out. Try again in an open area or increase timeout.';
+          errorMsg = 'Location request timed out';
         }
         Toast.show({
           type: 'error',
-          text1: 'Failed to get location',
+          text1: 'Location Error',
           text2: errorMsg,
         });
       },
       {
-        enableHighAccuracy: true,
-        timeout: 30000,
+        enableHighAccuracy: false, // Changed to false for faster response
+        timeout: 15000, // Reduced timeout
         maximumAge: 10000,
       },
     );
@@ -216,6 +216,9 @@ const IssueFormScreen = ({ navigation }) => {
   };
 
   // Form submission
+  const [showGeminiModal, setShowGeminiModal] = useState(false);
+  const [geminiReason, setGeminiReason] = useState('');
+
   const handleSubmit = async () => {
     // Validation
     if (!formData.title.trim()) {
@@ -226,11 +229,6 @@ const IssueFormScreen = ({ navigation }) => {
       Toast.show({ type: 'error', text1: 'Please select a category' });
       return;
     }
-    // if (!formData.location) {
-    //   Toast.show({ type: 'error', text1: 'Please add location' });
-    //   return;
-    // }
-
     setLoading(true);
     try {
       const formDataToSend = new FormData();
@@ -239,8 +237,6 @@ const IssueFormScreen = ({ navigation }) => {
       formDataToSend.append('category', formData.category);
       formDataToSend.append('priority', formData.priority);
       formDataToSend.append('location', JSON.stringify(formData.location));
-
-      // Append media files
       formData.media.forEach((media, index) => {
         formDataToSend.append('media', {
           uri: media.uri,
@@ -250,18 +246,27 @@ const IssueFormScreen = ({ navigation }) => {
       });
 
       const response = await issuesAPI.create(formDataToSend);
-
+      // If Gemini validation failed, backend returns 400 with validationFailed
+      if (response?.validationFailed) {
+        setGeminiReason(response?.validationDetails?.reason || 'Rejected by Gemini');
+        setShowGeminiModal(true);
+        return;
+      }
       Toast.show({
         type: 'success',
         text1: 'Issue reported successfully!',
         text2: 'Thank you for helping improve the community',
       });
-
-      navigation.goBack();
+      navigation.navigate('IssueTracking');
     } catch (error) {
       console.error('Submit error:', error);
-      const errorMsg =
-        error.response?.data?.message || 'Failed to report issue';
+      // If Gemini validation failed, backend returns 400 with validationFailed
+      if (error?.response?.data?.validationFailed) {
+        setGeminiReason(error?.response?.data?.validationDetails?.reason || 'Rejected by Gemini');
+        setShowGeminiModal(true);
+        return;
+      }
+      const errorMsg = error.response?.data?.message || 'Failed to report issue';
       Toast.show({ type: 'error', text1: 'Error', text2: errorMsg });
     } finally {
       setLoading(false);
@@ -323,6 +328,18 @@ const IssueFormScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* Gemini Rejection Modal */}
+      <Modal visible={showGeminiModal} transparent animationType="fade" onRequestClose={() => setShowGeminiModal(false)}>
+        <View style={styles.geminiModalOverlay}>
+          <View style={styles.geminiModalContent}>
+            <Text style={styles.geminiModalTitle}>Issue Rejected</Text>
+            <Text style={styles.geminiModalReason}>{geminiReason}</Text>
+            <TouchableOpacity style={styles.geminiModalButton} onPress={() => setShowGeminiModal(false)}>
+              <Text style={styles.geminiModalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>

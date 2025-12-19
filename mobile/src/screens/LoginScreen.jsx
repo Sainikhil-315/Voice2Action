@@ -75,7 +75,7 @@ const LoginScreen = ({ navigation }) => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Icon name="arrow-left" size={24} color="#1f2937" />
+            <Icon name="arrow-back" size={24} color="#1f2937" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Welcome Back</Text>
           <Text style={styles.headerSubtitle}>Sign in to continue</Text>
@@ -86,7 +86,7 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email Address</Text>
             <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
-              <Icon name="email-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <Icon name="mail-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your email"
@@ -110,7 +110,7 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
             <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-              <Icon name="lock-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <Icon name="lock-closed-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your password"

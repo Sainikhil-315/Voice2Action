@@ -185,6 +185,10 @@ const issueSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+    // Gemini validation fields
+    geminiStatus: { type: String, enum: ['accepted', 'rejected', null], default: null },
+    geminiReason: { type: String, default: '' },
+    expectedResolutionTime: { type: Date, default: null },
   views: {
     type: Number,
     default: 0,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,63 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
+import { issuesAPI } from '../utils/api';
 
 const ProfileScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+
+  const [stats, setStats] = useState({
+    issues: 0,
+    resolved: 0,
+    points: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    setStatsLoading(true);
+    try {
+      /**
+       * API CALLS (REAL BACKEND)
+       * 1. /issues/stats/overview  -> issues, resolved, points
+       * 2. /issues/my/issues       -> fallback + verification
+       */
+      const [statsRes, myIssuesRes] = await Promise.all([
+        issuesAPI.getStats(),
+        issuesAPI.getMyIssues({ limit: 100 }),
+      ]);
+
+      // ---- Parse stats overview ----
+      const overview = statsRes?.data || statsRes || {};
+      console.log("🔍 Fetched stats overview:", overview.data.overview.total);
+      // ---- Parse my issues ----
+      const issuesData = myIssuesRes?.data?.data || myIssuesRes?.data || {};
+      const issuesList = issuesData.issues || [];
+      console.log("🔍 Fetched issues for stats:", issuesList);
+      const resolvedCount = issuesList.filter(
+        (issue) => issue.status === 'resolved'
+      ).length;
+
+      setStats({
+        issues: overview.data.overview.total ?? issuesList.length ?? 0,
+        resolved: overview.resolvedIssues ?? resolvedCount ?? 0,
+        points: overview.totalPoints ?? 0,
+      });
+      console.log("✅ Profile stats fetched:", overview);
+    } catch (error) {
+      console.log('❌ Profile stats error:', error);
+      setStats({ issues: 0, resolved: 0, points: 0 });
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -20,7 +71,7 @@ const ProfileScreen = ({ navigation }) => {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: () => logout() },
+        { text: 'Logout', style: 'destructive', onPress: logout },
       ]
     );
   };
@@ -35,10 +86,12 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
       </View>
 
+      {/* Profile Card */}
       <View style={styles.profileCard}>
         <View style={styles.avatarContainer}>
           {user?.avatar ? (
@@ -52,28 +105,33 @@ const ProfileScreen = ({ navigation }) => {
             <Icon name="camera" size={18} color="#ffffff" />
           </TouchableOpacity>
         </View>
-        
+
         <Text style={styles.userName}>{user?.name}</Text>
         <Text style={styles.userEmail}>{user?.email}</Text>
 
+        {/* Stats */}
         <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statLabel}>Issues</Text>
-          </View>
+          <StatItem
+            label="Issues"
+            value={stats.issues}
+            loading={statsLoading}
+          />
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>8</Text>
-            <Text style={styles.statLabel}>Resolved</Text>
-          </View>
+          <StatItem
+            label="Resolved"
+            value={stats.resolved}
+            loading={statsLoading}
+          />
           <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>245</Text>
-            <Text style={styles.statLabel}>Points</Text>
-          </View>
+          <StatItem
+            label="Points"
+            value={stats.points}
+            loading={statsLoading}
+          />
         </View>
       </View>
 
+      {/* Menu */}
       <View style={styles.menu}>
         {menuItems.map((item, index) => (
           <TouchableOpacity
@@ -87,11 +145,12 @@ const ProfileScreen = ({ navigation }) => {
               </View>
               <Text style={styles.menuLabel}>{item.label}</Text>
             </View>
-            <Icon name="chevron-right" size={20} color="#9ca3af" />
+            <Icon name="chevron-forward" size={20} color="#9ca3af" />
           </TouchableOpacity>
         ))}
       </View>
 
+      {/* Logout */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Icon name="log-out" size={20} color="#ef4444" />
         <Text style={styles.logoutText}>Logout</Text>
@@ -102,6 +161,19 @@ const ProfileScreen = ({ navigation }) => {
   );
 };
 
+/* ---------- Small reusable stat component ---------- */
+const StatItem = ({ label, value, loading }) => (
+  <View style={styles.statItem}>
+    {loading ? (
+      <ActivityIndicator size="small" color="#2563eb" />
+    ) : (
+      <Text style={styles.statValue}>{value}</Text>
+    )}
+    <Text style={styles.statLabel}>{label}</Text>
+  </View>
+);
+
+/* ---------- Styles ---------- */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   header: {
@@ -111,6 +183,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1f2937' },
+
   profileCard: {
     backgroundColor: '#ffffff',
     margin: 20,
@@ -118,12 +191,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
   },
+
   avatarContainer: { position: 'relative', marginBottom: 16 },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
+  avatar: { width: 100, height: 100, borderRadius: 50 },
   avatarPlaceholder: {
     width: 100,
     height: 100,
@@ -143,13 +213,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  userName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
+
+  userName: { fontSize: 22, fontWeight: 'bold', color: '#1f2937' },
   userEmail: { fontSize: 14, color: '#6b7280', marginBottom: 20 },
+
   statsRow: {
     flexDirection: 'row',
     paddingTop: 20,
@@ -158,13 +225,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   statItem: { flex: 1, alignItems: 'center' },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
+  statValue: { fontSize: 20, fontWeight: 'bold', color: '#1f2937' },
   statLabel: { fontSize: 12, color: '#6b7280', marginTop: 4 },
   statDivider: { width: 1, backgroundColor: '#e5e7eb' },
+
   menu: {
     backgroundColor: '#ffffff',
     marginHorizontal: 20,
@@ -190,6 +254,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   menuLabel: { fontSize: 16, color: '#1f2937' },
+
   logoutButton: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -202,6 +267,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoutText: { fontSize: 16, fontWeight: '600', color: '#ef4444' },
+
   version: {
     textAlign: 'center',
     fontSize: 12,
