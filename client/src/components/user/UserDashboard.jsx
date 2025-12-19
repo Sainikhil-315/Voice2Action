@@ -280,7 +280,7 @@ const UserDashboard = () => {
               
               <div className="p-6 space-y-3">
                 
-                <Link href="/report"
+                <Link to="/report"
                   className="w-full btn btn-primary flex items-center justify-center"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -288,7 +288,7 @@ const UserDashboard = () => {
                 </Link>
                 
                 
-                <Link href="/issues"
+                <Link to="/issues"
                   className="w-full btn btn-outline flex items-center justify-center"
                 >
                   <Eye className="w-4 h-4 mr-2" />
@@ -296,7 +296,7 @@ const UserDashboard = () => {
                 </Link>
                 
                 
-                <Link href="/leaderboard"
+                <Link to="/leaderboard"
                   className="w-full btn btn-outline flex items-center justify-center"
                 >
                   <Trophy className="w-4 h-4 mr-2" />
