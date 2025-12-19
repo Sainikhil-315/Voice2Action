@@ -12,17 +12,14 @@ import {
   PermissionsAndroid,
   Platform,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Geolocation from '@react-native-community/geolocation';
-// import AudioRecorderPlayer from 'react-native-nitro-sound';
 import { issuesAPI } from '../utils/api';
 import { ISSUE_CATEGORIES, ISSUE_PRIORITY } from '../utils/constants';
-import { Picker } from '@react-native-picker/picker';
 import Toast from 'react-native-toast-message';
-
-// const audioRecorderPlayer = new AudioRecorderPlayer();
 
 const IssueFormScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -35,9 +32,7 @@ const IssueFormScreen = ({ navigation }) => {
   });
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
-  // const [isRecording, setIsRecording] = useState(false);
-  // const [recordingPath, setRecordingPath] = useState(null);
-  // const [recordTime, setRecordTime] = useState('00:00');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   // Request permissions
   const requestCameraPermission = async () => {
@@ -61,28 +56,6 @@ const IssueFormScreen = ({ navigation }) => {
     }
     return true;
   };
-
-  // const requestAudioPermission = async () => {
-  //   if (Platform.OS === 'android') {
-  //     try {
-  //       const granted = await PermissionsAndroid.request(
-  //         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-  //         {
-  //           title: 'Audio Permission',
-  //           message: 'App needs audio permission to record voice',
-  //           buttonNeutral: 'Ask Me Later',
-  //           buttonNegative: 'Cancel',
-  //           buttonPositive: 'OK',
-  //         },
-  //       );
-  //       return granted === PermissionsAndroid.RESULTS.GRANTED;
-  //     } catch (err) {
-  //       console.warn(err);
-  //       return false;
-  //     }
-  //   }
-  //   return true;
-  // };
 
   const requestLocationPermission = async () => {
     if (Platform.OS === 'android') {
@@ -189,59 +162,6 @@ const IssueFormScreen = ({ navigation }) => {
     }));
   };
 
-  // Voice recording functions
-  // const startRecording = async () => {
-  //   const hasPermission = await requestAudioPermission();
-  //   if (!hasPermission) {
-  //     Toast.show({ type: 'error', text1: 'Audio permission denied' });
-  //     return;
-  //   }
-  //   try {
-  //     const path = Platform.select({
-  //       ios: 'voice_recording.m4a',
-  //       android: `${Platform.constants.Release >= 10 ? 'file://' : ''}${Platform.constants.DocumentDirectoryPath}/voice_recording.mp3`,
-  //     });
-  //     await audioRecorderPlayer.startRecorder(path);
-  //     audioRecorderPlayer.addRecordBackListener((e) => {
-  //       const minutes = Math.floor(e.currentPosition / 60000);
-  //       const seconds = Math.floor((e.currentPosition % 60000) / 1000);
-  //       setRecordTime(
-  //         `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-  //       );
-  //     });
-  //     setIsRecording(true);
-  //     setRecordingPath(path);
-  //     Toast.show({ type: 'info', text1: 'Recording started' });
-  //   } catch (err) {
-  //     console.error('Recording error:', err);
-  //     Toast.show({ type: 'error', text1: 'Failed to start recording' });
-  //   }
-  // };
-  // const stopRecording = async () => {
-  //   try {
-  //     const result = await audioRecorderPlayer.stopRecorder();
-  //     audioRecorderPlayer.removeRecordBackListener();
-  //     setIsRecording(false);
-  //     if (result) {
-  //       const audioMedia = {
-  //         uri: result,
-  //         type: 'audio/mp3',
-  //         name: `voice_${Date.now()}.mp3`,
-  //       };
-  //       setFormData(prev => ({
-  //         ...prev,
-  //         media: [...prev.media, audioMedia],
-  //       }));
-  //       Toast.show({ type: 'success', text1: 'Voice recording added' });
-  //     }
-  //     setRecordTime('00:00');
-  //     setRecordingPath(null);
-  //   } catch (err) {
-  //     console.error('Stop recording error:', err);
-  //     Toast.show({ type: 'error', text1: 'Failed to stop recording' });
-  //   }
-  // };
-
   // Location function
   const getLocation = async () => {
     const hasPermission = await requestLocationPermission();
@@ -261,7 +181,6 @@ const IssueFormScreen = ({ navigation }) => {
           },
           address: `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`,
         };
-
         setFormData(prev => ({ ...prev, location }));
         setLocationLoading(false);
         Toast.show({ type: 'success', text1: 'Location captured' });
@@ -269,18 +188,31 @@ const IssueFormScreen = ({ navigation }) => {
       error => {
         console.error('Location error:', error);
         setLocationLoading(false);
+        let errorMsg = error.message;
+        if (error.code === 1) {
+          errorMsg = 'Location permission denied. Please allow location access in your device settings.';
+        } else if (error.code === 2) {
+          errorMsg = 'Location unavailable. Make sure your device location is enabled.';
+        } else if (error.code === 3) {
+          errorMsg = 'Location request timed out. Try again in an open area or increase timeout.';
+        }
         Toast.show({
           type: 'error',
           text1: 'Failed to get location',
-          text2: error.message,
+          text2: errorMsg,
         });
       },
       {
         enableHighAccuracy: true,
-        timeout: 15000,
+        timeout: 30000,
         maximumAge: 10000,
       },
     );
+  };
+
+  // Get category info
+  const getSelectedCategory = () => {
+    return ISSUE_CATEGORIES.find(cat => cat.value === formData.category);
   };
 
   // Form submission
@@ -294,10 +226,10 @@ const IssueFormScreen = ({ navigation }) => {
       Toast.show({ type: 'error', text1: 'Please select a category' });
       return;
     }
-    if (!formData.location) {
-      Toast.show({ type: 'error', text1: 'Please add location' });
-      return;
-    }
+    // if (!formData.location) {
+    //   Toast.show({ type: 'error', text1: 'Please add location' });
+    //   return;
+    // }
 
     setLoading(true);
     try {
@@ -335,6 +267,59 @@ const IssueFormScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
+
+  const CategoryModal = () => (
+    <Modal
+      visible={showCategoryModal}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowCategoryModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Select Category</Text>
+            <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+              <Icon name="close" size={24} color="#1f2937" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.categoryList}>
+            {ISSUE_CATEGORIES.map(cat => (
+              <TouchableOpacity
+                key={cat.value}
+                style={[
+                  styles.categoryOption,
+                  formData.category === cat.value && styles.categoryOptionSelected
+                ]}
+                onPress={() => {
+                  setFormData({ ...formData, category: cat.value });
+                  setShowCategoryModal(false);
+                }}
+              >
+                <View style={styles.categoryOptionLeft}>
+                  <Icon 
+                    name={cat.icon} 
+                    size={24} 
+                    color={formData.category === cat.value ? '#2563eb' : '#6b7280'} 
+                  />
+                  <Text style={[
+                    styles.categoryOptionText,
+                    formData.category === cat.value && styles.categoryOptionTextSelected
+                  ]}>
+                    {cat.label}
+                  </Text>
+                </View>
+                {formData.category === cat.value && (
+                  <Icon name="checkmark-circle" size={24} color="#2563eb" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <View style={styles.container}>
@@ -382,29 +367,34 @@ const IssueFormScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Category */}
+        {/* Category - New Design */}
         <View style={styles.field}>
           <Text style={styles.label}>Category *</Text>
-
-          <View style={styles.dropdownContainer}>
-            <Picker
-              selectedValue={formData.category}
-              onValueChange={value =>
-                setFormData({ ...formData, category: value })
-              }
-              style={styles.picker}
-              dropdownIconColor="#2563eb"
-            >
-              <Picker.Item label="Select a category" value="" />
-              {ISSUE_CATEGORIES.map(cat => (
-                <Picker.Item
-                  key={cat.value}
-                  label={`${typeof cat.icon === 'string' ? cat.icon : ''} ${cat.label}`}
-                  value={cat.value}
+          <TouchableOpacity
+            style={styles.categorySelector}
+            onPress={() => setShowCategoryModal(true)}
+          >
+            {formData.category ? (
+              <View style={styles.categorySelectorContent}>
+                <Icon 
+                  name={getSelectedCategory()?.icon || 'list-outline'} 
+                  size={24} 
+                  color="#2563eb" 
                 />
-              ))}
-            </Picker>
-          </View>
+                <Text style={styles.categorySelectorText}>
+                  {getSelectedCategory()?.label || 'Select a category'}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.categorySelectorContent}>
+                <Icon name="list-outline" size={24} color="#9ca3af" />
+                <Text style={styles.categorySelectorPlaceholder}>
+                  Select a category
+                </Text>
+              </View>
+            )}
+            <Icon name="chevron-forward" size={20} color="#9ca3af" />
+          </TouchableOpacity>
         </View>
 
         {/* Priority */}
@@ -489,38 +479,6 @@ const IssueFormScreen = ({ navigation }) => {
           )}
         </View>
 
-        {/* Voice Recording (Commented Out) */}
-        {/**
-        <View style={styles.field}>
-          <Text style={styles.label}>Voice Note (Optional)</Text>
-          <View style={styles.voiceRecordingContainer}>
-            {!isRecording ? (
-              <TouchableOpacity
-                style={styles.recordButton}
-                onPress={startRecording}
-                disabled={formData.media.length >= 5}
-              >
-                <Icon name="mic" size={28} color="#ffffff" />
-                <Text style={styles.recordButtonText}>Start Recording</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.recordingActive}>
-                <View style={styles.recordingIndicator}>
-                  <View style={styles.recordingDot} />
-                  <Text style={styles.recordingText}>Recording... {recordTime}</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.stopButton}
-                  onPress={stopRecording}
-                >
-                  <Icon name="stop" size={24} color="#ffffff" />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
-        */}
-
         {/* Location */}
         <View style={styles.field}>
           <Text style={styles.label}>Location *</Text>
@@ -556,6 +514,8 @@ const IssueFormScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <CategoryModal />
     </View>
   );
 };
@@ -588,24 +548,92 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
-  categoryChip: {
+  
+  // Category Selector Styles
+  categorySelector: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#f9fafb',
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
+    paddingVertical: 16,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
-  categoryChipActive: {
-    backgroundColor: '#eff6ff',
-    borderColor: '#2563eb',
+  categorySelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
-  categoryIcon: { fontSize: 18, marginRight: 6 },
-  categoryText: { fontSize: 14, color: '#374151' },
-  categoryTextActive: { color: '#2563eb', fontWeight: '600' },
+  categorySelectorText: {
+    fontSize: 16,
+    color: '#1f2937',
+    fontWeight: '500',
+    marginLeft: 12,
+  },
+  categorySelectorPlaceholder: {
+    fontSize: 16,
+    color: '#9ca3af',
+    marginLeft: 12,
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  categoryList: {
+    maxHeight: 500,
+  },
+  categoryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  categoryOptionSelected: {
+    backgroundColor: '#eff6ff',
+  },
+  categoryOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  categoryOptionText: {
+    fontSize: 16,
+    color: '#374151',
+    marginLeft: 12,
+  },
+  categoryOptionTextSelected: {
+    color: '#2563eb',
+    fontWeight: '600',
+  },
+  
   priorityRow: { flexDirection: 'row', gap: 8 },
   priorityButton: {
     flex: 1,
@@ -657,46 +685,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
   },
-  voiceRecordingContainer: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    padding: 16,
-  },
-  recordButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ef4444',
-    paddingVertical: 14,
-    borderRadius: 8,
-    gap: 8,
-  },
-  recordButtonText: { fontSize: 16, color: '#ffffff', fontWeight: '500' },
-  recordingActive: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  recordingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  recordingDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#ef4444',
-  },
-  recordingText: { fontSize: 16, color: '#1f2937', fontWeight: '500' },
-  stopButton: {
-    backgroundColor: '#6b7280',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   locationButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -711,17 +699,6 @@ const styles = StyleSheet.create({
   },
   locationText: { fontSize: 16, color: '#2563eb', fontWeight: '500' },
   locationTextActive: { color: '#10b981' },
-  dropdownContainer: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 52,
-    color: '#1f2937',
-  },
 });
 
 export default IssueFormScreen;
