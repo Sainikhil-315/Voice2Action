@@ -13,9 +13,11 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,15 +29,15 @@ const LoginScreen = ({ navigation }) => {
     const newErrors = {};
     
     if (!email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('email_required');
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = t('email_invalid');
     }
     
     if (!password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('password_required');
     } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('password_min_length');
     }
     
     setErrors(newErrors);
@@ -52,10 +54,10 @@ const LoginScreen = ({ navigation }) => {
       if (result.success) {
         // Navigation handled by AuthContext
       } else if (result.error) {
-        Alert.alert('Login Failed', result.error);
+        Alert.alert(t('login_failed'), result.error);
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      Alert.alert(t('error'), t('unexpected_error'));
     } finally {
       setLoading(false);
     }
@@ -77,19 +79,19 @@ const LoginScreen = ({ navigation }) => {
           >
             <Icon name="arrow-back" size={24} color="#1f2937" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Welcome Back</Text>
-          <Text style={styles.headerSubtitle}>Sign in to continue</Text>
+          <Text style={styles.headerTitle}>{t('welcome_back')}</Text>
+          <Text style={styles.headerSubtitle}>{t('sign_in_to_continue')}</Text>
         </View>
 
         <View style={styles.form}>
           {/* Email Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address</Text>
+            <Text style={styles.label}>{t('email_address')}</Text>
             <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
               <Icon name="mail-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder={t('enter_your_email')}
                 placeholderTextColor="#9ca3af"
                 value={email}
                 onChangeText={(text) => {
@@ -108,12 +110,12 @@ const LoginScreen = ({ navigation }) => {
 
           {/* Password Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{t('password')}</Text>
             <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
               <Icon name="lock-closed-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your password"
+                placeholder={t('enter_your_password')}
                 placeholderTextColor="#9ca3af"
                 value={password}
                 onChangeText={(text) => {
@@ -142,7 +144,7 @@ const LoginScreen = ({ navigation }) => {
 
           {/* Forgot Password */}
           <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            <Text style={styles.forgotPasswordText}>{t('forgot_password')}</Text>
           </TouchableOpacity>
 
           {/* Login Button */}
@@ -154,22 +156,22 @@ const LoginScreen = ({ navigation }) => {
             {loading ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text style={styles.loginButtonText}>Sign In</Text>
+              <Text style={styles.loginButtonText}>{t('sign_in')}</Text>
             )}
           </TouchableOpacity>
 
           {/* Divider */}
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
+            <Text style={styles.dividerText}>{t('or')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
           {/* Register Link */}
           <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
+            <Text style={styles.registerText}>{t('dont_have_account')} </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.registerLink}>Sign Up</Text>
+              <Text style={styles.registerLink}>{t('sign_up')}</Text>
             </TouchableOpacity>
           </View>
         </View>

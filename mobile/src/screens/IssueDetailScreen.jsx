@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -15,6 +16,7 @@ import { issuesAPI } from '../utils/api';
 import { formatRelativeTime } from '../utils/helpers';
 
 const IssueDetailScreen = ({ route, navigation }) => {
+  const { t } = useTranslation();
         // Add missing handleAddComment function
         const handleAddComment = async () => {
           if (!comment.trim()) return;
@@ -24,7 +26,7 @@ const IssueDetailScreen = ({ route, navigation }) => {
             setComment('');
             loadIssue();
           } catch (error) {
-            Alert.alert('Error', 'Failed to add comment');
+            Alert.alert(t('error'), t('failed_to_add_comment'));
           } finally {
             setCommenting(false);
           }
@@ -40,7 +42,7 @@ const IssueDetailScreen = ({ route, navigation }) => {
             userHasUpvoted: !prev.userHasUpvoted,
           }));
         } catch (error) {
-          Alert.alert('Error', 'Failed to upvote');
+          Alert.alert(t('error'), t('failed_to_upvote'));
         }
       };
     // Add missing getStatusColor function
@@ -69,7 +71,7 @@ const IssueDetailScreen = ({ route, navigation }) => {
       const response = await issuesAPI.getById(id);
       setIssue(response.data.data?.issue || response.data.issue || response.data);
     } catch (error) {
-      Alert.alert('Error', 'Failed to load issue details');
+      Alert.alert(t('error'), t('failed_to_load_issue_details'));
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -86,9 +88,9 @@ const IssueDetailScreen = ({ route, navigation }) => {
   if (!issue) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.headerTitle}>Issue not found</Text>
+        <Text style={styles.headerTitle}>{t('issue_not_found')}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={{ color: '#2563eb', marginTop: 16 }}>Go Back</Text>
+          <Text style={{ color: '#2563eb', marginTop: 16 }}>{t('go_back')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -100,7 +102,7 @@ const IssueDetailScreen = ({ route, navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#1f2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Issue Details</Text>
+        <Text style={styles.headerTitle}>{t('issue_details')}</Text>
         <TouchableOpacity style={styles.shareButton}>
           <Icon name="share-social" size={24} color="#1f2937" />
         </TouchableOpacity>
@@ -112,7 +114,7 @@ const IssueDetailScreen = ({ route, navigation }) => {
           <View style={styles.issueMeta}>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(issue.status) + '20' }]}> 
               <Text style={[styles.statusText, { color: getStatusColor(issue.status) }]}> 
-                {issue.status.replace('_', ' ')}
+                {t(`status.${issue.status.replace('_', '')}`)}
               </Text>
             </View>
             <Text style={styles.issueDate}>{formatRelativeTime(issue.createdAt)}</Text>
@@ -122,22 +124,22 @@ const IssueDetailScreen = ({ route, navigation }) => {
         {/* Gemini Validation Info */}
         {console.log("🔍 Issue Gemini Data:", issue)}
         <View style={styles.geminiSection}>
-          <Text style={styles.geminiTitle}>Gemini Validation</Text>
+          <Text style={styles.geminiTitle}>{t('gemini_validation')}</Text>
           <View style={styles.geminiRow}>
-            <Text style={styles.geminiLabel}>Status:</Text>
+            <Text style={styles.geminiLabel}>{t('status')}:</Text>
             <Text style={styles.geminiValue}>
-              {issue.geminiStatus === 'accepted' ? '✅ Accepted' : issue.geminiStatus === 'rejected' ? '❌ Rejected' : 'N/A'}
+              {issue.geminiStatus === 'accepted' ? t('accepted') : issue.geminiStatus === 'rejected' ? t('rejected') : t('not_available')}
             </Text>
           </View>
           {issue.geminiReason ? (
             <View style={styles.geminiRow}>
-              <Text style={styles.geminiLabel}>Reason:</Text>
+              <Text style={styles.geminiLabel}>{t('reason')}:</Text>
               <Text style={styles.geminiValue}>{issue.geminiReason}</Text>
             </View>
           ) : null}
           {issue.expectedResolutionTime ? (
             <View style={styles.geminiRow}>
-              <Text style={styles.geminiLabel}>Expected Resolution:</Text>
+              <Text style={styles.geminiLabel}>{t('expected_resolution')}:</Text>
               <Text style={styles.geminiValue}>{new Date(issue.expectedResolutionTime).toLocaleString()}</Text>
             </View>
           ) : null}
@@ -169,11 +171,11 @@ const IssueDetailScreen = ({ route, navigation }) => {
         </View>
 
         <View style={styles.commentsSection}>
-          <Text style={styles.commentsTitle}>Comments ({issue.comments?.length || 0})</Text>
+          <Text style={styles.commentsTitle}>{t('comments')} ({issue.comments?.length || 0})</Text>
           <View style={styles.commentInput}>
             <TextInput
               style={styles.input}
-              placeholder="Add a comment..."
+              placeholder={t('add_a_comment')}
               placeholderTextColor="#9ca3af"
               value={comment}
               onChangeText={setComment}
@@ -195,7 +197,7 @@ const IssueDetailScreen = ({ route, navigation }) => {
           {issue.comments?.map((c) => (
             <View key={c._id} style={styles.commentCard}>
               <View style={styles.commentHeader}>
-                <Text style={styles.commentAuthor}>{c.user?.name || 'Anonymous'}</Text>
+                <Text style={styles.commentAuthor}>{c.user?.name || t('anonymous')}</Text>
                 <Text style={styles.commentDate}>{formatRelativeTime(c.createdAt)}</Text>
               </View>
               <Text style={styles.commentText}>{c.message}</Text>

@@ -1,0 +1,278 @@
+{
+  "common": {
+    "welcome": "स्वागत है",
+    "loading": "लोड हो रहा है...",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "cancel": "रद्द करें",
+    "confirm": "पुष्टि करें",
+    "save": "सेव करें",
+    "delete": "हटाएं",
+    "edit": "संपादित करें",
+    "submit": "जमा करें",
+    "back": "वापस",
+    "next": "आगे",
+    "search": "खोजें",
+    "filter": "फ़िल्टर",
+    "clear": "साफ़ करें",
+    "viewAll": "सभी देखें",
+    "tryAgain": "पुनः प्रयास करें",
+    "required": "आवश्यक"
+  },
+  "auth": {
+    "login": "लॉगिन",
+    "register": "रजिस्टर",
+    "logout": "लॉगआउट",
+    "email": "ईमेल पता",
+    "password": "पासवर्ड",
+    "confirmPassword": "पासवर्ड की पुष्टि करें",
+    "fullName": "पूरा नाम",
+    "phone": "फोन नंबर",
+    "welcomeBack": "वापसी पर स्वागत है",
+    "signInToContinue": "जारी रखने के लिए साइन इन करें",
+    "createAccount": "खाता बनाएं",
+    "joinToday": "आज Voice2Action में शामिल हों",
+    "forgotPassword": "पासवर्ड भूल गए?",
+    "dontHaveAccount": "खाता नहीं है?",
+    "alreadyHaveAccount": "पहले से खाता है?",
+    "signIn": "साइन इन",
+    "signUp": "साइन अप",
+    "optional": "वैकल्पिक",
+    "passwordHelper": "8+ अक्षर, बड़ा अक्षर, छोटा अक्षर और संख्या आवश्यक",
+    "termsAgree": "खाता बनाकर, आप हमारी",
+    "termsOfService": "सेवा की शर्तें",
+    "and": "और",
+    "privacyPolicy": "गोपनीयता नीति",
+    "logoutConfirm": "क्या आप लॉगआउट करना चाहते हैं?",
+    "loginFailed": "लॉगिन विफल रहा",
+    "registrationFailed": "पंजीकरण विफल रहा"
+  },
+  "home": {
+    "title": "अपनी नागरिक चिंताओं को आवाज दें",
+    "subtitle": "फोटो, वीडियो और आवाज के साथ समस्याओं की रिपोर्ट करें। वास्तविक समय में प्रगति को ट्रैक करें।",
+    "getStarted": "शुरू करें",
+    "powerfulFeatures": "शक्तिशाली फीचर्स",
+    "featuresSubtitle": "नागरिक समस्याओं को रिपोर्ट और ट्रैक करने के लिए आवश्यक सब कुछ",
+    "howItWorks": "यह कैसे काम करता है",
+    "readyToMakeDifference": "बदलाव लाने के लिए तैयार हैं?",
+    "joinThousands": "हजारों लोगों के साथ अपने समुदाय को बेहतर बनाने में शामिल हों",
+    "startReporting": "समस्याओं की रिपोर्ट करना शुरू करें",
+    "features": {
+      "multimedia": {
+        "title": "मल्टी-मीडिया रिपोर्टिंग",
+        "description": "फोटो, वीडियो या आवाज के साथ रिपोर्ट करें"
+      },
+      "gps": {
+        "title": "GPS स्थान",
+        "description": "स्थानों को सटीक रूप से ऑटो-टैग करें"
+      },
+      "realtime": {
+        "title": "रियल-टाइम अपडेट",
+        "description": "तत्काल सूचनाएं प्राप्त करें"
+      },
+      "tracking": {
+        "title": "प्रगति ट्रैक करें",
+        "description": "शुरुआत से समाधान तक निगरानी करें"
+      }
+    },
+    "steps": {
+      "report": {
+        "title": "समस्या की रिपोर्ट करें",
+        "description": "फोटो लें या विवरण रिकॉर्ड करें"
+      },
+      "review": {
+        "title": "एडमिन समीक्षा करता है",
+        "description": "सत्यापन और अग्रेषण"
+      },
+      "action": {
+        "title": "अधिकारी कार्रवाई करता है",
+        "description": "समाधान पर काम शुरू होता है"
+      },
+      "track": {
+        "title": "प्रगति ट्रैक करें",
+        "description": "रियल-टाइम स्थिति अपडेट"
+      }
+    },
+    "stats": {
+      "issuesReported": "रिपोर्ट की गई समस्याएं",
+      "issuesResolved": "हल की गई समस्याएं",
+      "successRate": "सफलता दर"
+    }
+  },
+  "dashboard": {
+    "welcome": "वापसी पर स्वागत है",
+    "myIssues": "मेरी समस्याएं",
+    "resolved": "हल हो गया",
+    "pending": "लंबित",
+    "quickActions": "त्वरित कार्रवाई",
+    "reportIssue": "समस्या रिपोर्ट करें",
+    "myIssuesList": "मेरी समस्याएं",
+    "leaderboard": "लीडरबोर्ड",
+    "profile": "प्रोफ़ाइल",
+    "recentIssues": "हाल की समस्याएं",
+    "noIssuesYet": "अभी तक कोई समस्या नहीं",
+    "reportFirstIssue": "पहली समस्या रिपोर्ट करें",
+    "communityImpact": "समुदाय प्रभाव",
+    "totalIssues": "कुल समस्याएं",
+    "resolutionRate": "सफलता दर",
+    "yourRank": "आपकी समुदाय रैंक",
+    "points": "अंक",
+    "issues": "समस्याएं",
+    "loadingDashboard": "डैशबोर्ड लोड हो रहा है..."
+  },
+  "issues": {
+    "title": "शीर्षक",
+    "description": "विवरण",
+    "category": "श्रेणी",
+    "priority": "प्राथमिकता",
+    "location": "स्थान",
+    "status": "स्थिति",
+    "media": "फोटो/वीडियो",
+    "reportIssue": "समस्या रिपोर्ट करें",
+    "briefDescription": "समस्या का संक्षिप्त विवरण",
+    "detailedDescription": "विस्तृत विवरण...",
+    "selectCategory": "श्रेणी चुनें",
+    "allCategories": "सभी श्रेणियां",
+    "camera": "कैमरा",
+    "gallery": "गैलरी",
+    "addLocation": "वर्तमान स्थान जोड़ें",
+    "locationAdded": "स्थान",
+    "cameraPermissionDenied": "कैमरा अनुमति अस्वीकृत",
+    "locationPermissionDenied": "स्थान अनुमति अस्वीकृत",
+    "photoAdded": "फोटो सफलतापूर्वक जोड़ी गई",
+    "locationCaptured": "स्थान कैप्चर किया गया",
+    "issueReported": "समस्या सफलतापूर्वक रिपोर्ट की गई!",
+    "thankYou": "समुदाय को बेहतर बनाने में मदद के लिए धन्यवाद",
+    "submitting": "जमा किया जा रहा है...",
+    "myIssues": "मेरी समस्याएं",
+    "searchIssues": "अपनी समस्याओं को खोजें...",
+    "noIssuesFound": "कोई समस्या नहीं मिली",
+    "adjustFilters": "अपने फ़िल्टर समायोजित करने का प्रयास करें",
+    "loadingIssues": "समस्याएं लोड हो रही हैं...",
+    "issueDetails": "समस्या विवरण",
+    "geminiValidation": "जेमिनी सत्यापन",
+    "accepted": "स्वीकृत",
+    "rejected": "अस्वीकृत",
+    "reason": "कारण",
+    "expectedResolution": "अपेक्षित समाधान",
+    "authority": "अधिकारी",
+    "estResolution": "अनुमानित समाधान",
+    "comments": "टिप्पणियां",
+    "addComment": "टिप्पणी जोड़ें...",
+    "markRead": "पढ़ा हुआ चिह्नित करें",
+    "categories": {
+      "roadMaintenance": "सड़क रखरखाव",
+      "wasteManagement": "कचरा प्रबंधन",
+      "waterSupply": "जल आपूर्ति",
+      "electricity": "बिजली",
+      "fireSafety": "अग्नि सुरक्षा",
+      "publicTransport": "सार्वजनिक परिवहन",
+      "parksRecreation": "पार्क और मनोरंजन",
+      "streetLighting": "सड़क प्रकाश",
+      "drainage": "जल निकासी",
+      "noisePollution": "ध्वनि प्रदूषण",
+      "illegalConstruction": "अवैध निर्माण",
+      "animalControl": "पशु नियंत्रण",
+      "other": "अन्य"
+    },
+    "statuses": {
+      "pending": "लंबित",
+      "verified": "सत्यापित",
+      "rejected": "अस्वीकृत",
+      "inProgress": "प्रगति में",
+      "resolved": "हल हो गया"
+    },
+    "priorities": {
+      "low": "कम",
+      "medium": "मध्यम",
+      "high": "उच्च",
+      "urgent": "तत्काल"
+    }
+  },
+  "leaderboard": {
+    "title": "लीडरबोर्ड",
+    "subtitle": "शीर्ष समुदाय योगदानकर्ता",
+    "communityImpact": "समुदाय प्रभाव",
+    "totalIssues": "कुल समस्याएं",
+    "resolved": "हल हो गया",
+    "contributors": "योगदानकर्ता",
+    "resolutionRate": "समाधान दर",
+    "allRankings": "सभी रैंकिंग",
+    "noData": "अभी तक लीडरबोर्ड डेटा नहीं",
+    "beFirst": "समस्या रिपोर्ट करने वाले पहले व्यक्ति बनें!",
+    "loadingLeaderboard": "लीडरबोर्ड लोड हो रहा है...",
+    "issues": "समस्याएं",
+    "resolvedCount": "हल हो गया",
+    "pts": "अंक"
+  },
+  "profile": {
+    "title": "प्रोफ़ाइल",
+    "editProfile": "प्रोफ़ाइल संपादित करें",
+    "notifications": "सूचनाएं",
+    "privacySecurity": "गोपनीयता और सुरक्षा",
+    "helpSupport": "सहायता और समर्थन",
+    "about": "के बारे में",
+    "logout": "लॉगआउट",
+    "version": "संस्करण",
+    "issues": "समस्याएं",
+    "resolved": "हल हो गया",
+    "points": "अंक"
+  },
+  "notifications": {
+    "title": "सूचनाएं",
+    "unread": "अपठित",
+    "markAllRead": "सभी को पढ़ा हुआ चिह्नित करें",
+    "noNotifications": "कोई सूचना नहीं",
+    "allCaughtUp": "आप सब पकड़ गए हैं! अपडेट के लिए बाद में वापस देखें।",
+    "loadingNotifications": "सूचनाएं लोड हो रही हैं...",
+    "delete": "हटाएं",
+    "markRead": "पढ़ा हुआ चिह्नित करें"
+  },
+  "rejection": {
+    "inappropriateContent": {
+      "title": "अनुचित सामग्री",
+      "description": "आपके सबमिशन में ऐसी सामग्री है जो हमारे समुदाय दिशानिर्देशों का उल्लंघन करती है।"
+    },
+    "spam": {
+      "title": "स्पैम का पता चला",
+      "description": "यह स्पैम या डुप्लिकेट सामग्री प्रतीत होता है।"
+    },
+    "insufficientInfo": {
+      "title": "अधिक जानकारी की आवश्यकता है",
+      "description": "कृपया अपनी रिपोर्ट को संसाधित करने में हमारी सहायता के लिए अधिक विवरण प्रदान करें।"
+    },
+    "contentQuality": {
+      "title": "गुणवत्ता मानक",
+      "description": "आपके सबमिशन को हमारे मानकों को पूरा करने के लिए सुधार की आवश्यकता है।"
+    },
+    "rejectionReason": "अस्वीकृति कारण",
+    "howToImprove": "कैसे सुधारें",
+    "needHelp": "मदद चाहिए? हमारे",
+    "communityGuidelines": "समुदाय दिशानिर्देश",
+    "cancel": "रद्द करें",
+    "tryAgain": "पुनः प्रयास करें"
+  },
+  "validation": {
+    "required": "यह फ़ील्ड आवश्यक है",
+    "invalidEmail": "ईमेल अमान्य है",
+    "invalidPhone": "फोन नंबर अमान्य है",
+    "passwordTooShort": "पासवर्ड कम से कम 6 अक्षर का होना चाहिए",
+    "passwordsDoNotMatch": "पासवर्ड मेल नहीं खाते",
+    "titleRequired": "कृपया शीर्षक दर्ज करें",
+    "categoryRequired": "कृपया श्रेणी चुनें",
+    "locationRequired": "कृपया स्थान जोड़ें"
+  },
+  "toast": {
+    "welcomeBack": "वापसी पर स्वागत है",
+    "welcomeTo": "Voice2Action में आपका स्वागत है",
+    "loggedOutSuccess": "सफलतापूर्वक लॉगआउट हुआ",
+    "profileUpdated": "प्रोफ़ाइल सफलतापूर्वक अपडेट की गई",
+    "avatarUpdated": "अवतार सफलतापूर्वक अपडेट किया गया",
+    "passwordChanged": "पासवर्ड सफलतापूर्वक बदला गया",
+    "resetLinkSent": "आपके ईमेल पर पासवर्ड रीसेट लिंक भेजा गया",
+    "allMarkedRead": "सभी सूचनाओं को पढ़ा हुआ चिह्नित किया गया",
+    "notificationDeleted": "सूचना हटाई गई",
+    "failedToLoad": "लोड करने में विफल",
+    "pleaseRetry": "कृपया पुनः प्रयास करें"
+  }
+}

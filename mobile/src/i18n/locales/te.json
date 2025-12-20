@@ -1,0 +1,278 @@
+{
+  "common": {
+    "welcome": "స్వాగతం",
+    "loading": "లోడ్ అవుతోంది...",
+    "error": "లోపం",
+    "success": "విజయం",
+    "cancel": "రద్దు చేయి",
+    "confirm": "నిర్ధారించు",
+    "save": "సేవ్ చేయి",
+    "delete": "తొలగించు",
+    "edit": "సవరించు",
+    "submit": "సమర్పించు",
+    "back": "వెనుకకు",
+    "next": "తరువాత",
+    "search": "వెతుకు",
+    "filter": "ఫిల్టర్",
+    "clear": "క్లియర్",
+    "viewAll": "అన్నీ చూడు",
+    "tryAgain": "మళ్ళీ ప్రయత్నించండి",
+    "required": "అవసరం"
+  },
+  "auth": {
+    "login": "లాగిన్",
+    "register": "రిజిస్టర్",
+    "logout": "లాగౌట్",
+    "email": "ఇమెయిల్ చిరునామా",
+    "password": "పాస్వర్డ్",
+    "confirmPassword": "పాస్వర్డ్ను నిర్ధారించండి",
+    "fullName": "పూర్తి పేరు",
+    "phone": "ఫోన్ నంబర్",
+    "welcomeBack": "మళ్ళీ స్వాగతం",
+    "signInToContinue": "కొనసాగడానికి సైన్ ఇన్ చేయండి",
+    "createAccount": "ఖాతా సృష్టించండి",
+    "joinToday": "ఈరోజు Voice2Action లో చేరండి",
+    "forgotPassword": "పాస్వర్డ్ మర్చిపోయారా?",
+    "dontHaveAccount": "ఖాతా లేదా?",
+    "alreadyHaveAccount": "ఇప్పటికే ఖాతా ఉందా?",
+    "signIn": "సైన్ ఇన్",
+    "signUp": "సైన్ అప్",
+    "optional": "ఐచ్ఛికం",
+    "passwordHelper": "8+ అక్షరాలు, పెద్ద అక్షరం, చిన్న అక్షరం మరియు సంఖ్య తప్పనిసరి",
+    "termsAgree": "ఖాతా సృష్టించడం ద్వారా, మీరు మా",
+    "termsOfService": "సేవా నిబంధనలు",
+    "and": "మరియు",
+    "privacyPolicy": "గోప్యతా విధానం",
+    "logoutConfirm": "మీరు లాగౌట్ చేయాలనుకుంటున్నారా?",
+    "loginFailed": "లాగిన్ విఫలమైంది",
+    "registrationFailed": "రిజిస్ట్రేషన్ విఫలమైంది"
+  },
+  "home": {
+    "title": "మీ పౌర సమస్యలను వినిపించండి",
+    "subtitle": "ఫోటోలు, వీడియోలు మరియు వాయిస్తో సమస్యలను నివేదించండి. నిజ సమయంలో పురోగతిని ట్రాక్ చేయండి.",
+    "getStarted": "ప్రారంభించండి",
+    "powerfulFeatures": "శక్తివంతమైన ఫీచర్లు",
+    "featuresSubtitle": "పౌర సమస్యలను నివేదించడానికి మరియు ట్రాక్ చేయడానికి అవసరమైన అన్నీ",
+    "howItWorks": "ఇది ఎలా పనిచేస్తుంది",
+    "readyToMakeDifference": "తేడా తీసుకురావడానికి సిద్ధంగా ఉన్నారా?",
+    "joinThousands": "వేలాది మంది తమ సమాజాలను మెరుగుపరుచుకోవడంలో చేరండి",
+    "startReporting": "సమస్యలను నివేదించడం ప్రారంభించండి",
+    "features": {
+      "multimedia": {
+        "title": "మల్టీ-మీడియా రిపోర్టింగ్",
+        "description": "ఫోటోలు, వీడియోలు లేదా వాయిస్తో నివేదించండి"
+      },
+      "gps": {
+        "title": "GPS లొకేషన్",
+        "description": "స్థానాలను ఖచ్చితంగా ఆటో-ట్యాగ్ చేయండి"
+      },
+      "realtime": {
+        "title": "రియల్-టైమ్ అప్డేట్లు",
+        "description": "తక్షణ నోటిఫికేషన్లు పొందండి"
+      },
+      "tracking": {
+        "title": "పురోగతిని ట్రాక్ చేయండి",
+        "description": "ప్రారంభం నుండి పరిష్కారం వరకు పర్యవేక్షించండి"
+      }
+    },
+    "steps": {
+      "report": {
+        "title": "సమస్యను నివేదించండి",
+        "description": "ఫోటో తీయండి లేదా వివరాలను రికార్డ్ చేయండి"
+      },
+      "review": {
+        "title": "అడ్మిన్ సమీక్షిస్తారు",
+        "description": "ధృవీకరణ మరియు ఫార్వార్డింగ్"
+      },
+      "action": {
+        "title": "అధికారం చర్య తీసుకుంటుంది",
+        "description": "పరిష్కారంపై పని ప్రారంభమవుతుంది"
+      },
+      "track": {
+        "title": "పురోగతిని ట్రాక్ చేయండి",
+        "description": "రియల్-టైమ్ స్థితి అప్డేట్లు"
+      }
+    },
+    "stats": {
+      "issuesReported": "నివేదించిన సమస్యలు",
+      "issuesResolved": "పరిష్కరించిన సమస్యలు",
+      "successRate": "విజయ రేటు"
+    }
+  },
+  "dashboard": {
+    "welcome": "మళ్ళీ స్వాగతం",
+    "myIssues": "నా సమస్యలు",
+    "resolved": "పరిష్కరించబడింది",
+    "pending": "పెండింగ్",
+    "quickActions": "త్వరిత చర్యలు",
+    "reportIssue": "సమస్యను నివేదించండి",
+    "myIssuesList": "నా సమస్యలు",
+    "leaderboard": "లీడర్బోర్డ్",
+    "profile": "ప్రొఫైల్",
+    "recentIssues": "ఇటీవలి సమస్యలు",
+    "noIssuesYet": "ఇంకా సమస్యలు లేవు",
+    "reportFirstIssue": "మొదటి సమస్యను నివేదించండి",
+    "communityImpact": "కమ్యూనిటీ ప్రభావం",
+    "totalIssues": "మొత్తం సమస్యలు",
+    "resolutionRate": "విజయ రేటు",
+    "yourRank": "మీ కమ్యూనిటీ ర్యాంక్",
+    "points": "పాయింట్లు",
+    "issues": "సమస్యలు",
+    "loadingDashboard": "డాష్బోర్డ్ లోడ్ అవుతోంది..."
+  },
+  "issues": {
+    "title": "శీర్షిక",
+    "description": "వివరణ",
+    "category": "వర్గం",
+    "priority": "ప్రాధాన్యత",
+    "location": "స్థానం",
+    "status": "స్థితి",
+    "media": "ఫోటోలు/వీడియోలు",
+    "reportIssue": "సమస్యను నివేదించండి",
+    "briefDescription": "సమస్య యొక్క సంక్షిప్త వివరణ",
+    "detailedDescription": "వివరణాత్మక వివరణ...",
+    "selectCategory": "వర్గాన్ని ఎంచుకోండి",
+    "allCategories": "అన్ని వర్గాలు",
+    "camera": "కెమెరా",
+    "gallery": "గ్యాలరీ",
+    "addLocation": "ప్రస్తుత స్థానాన్ని జోడించండి",
+    "locationAdded": "స్థానం",
+    "cameraPermissionDenied": "కెమెరా అనుమతి తిరస్కరించబడింది",
+    "locationPermissionDenied": "స్థాన అనుమతి తిరస్కరించబడింది",
+    "photoAdded": "ఫోటో విజయవంతంగా జోడించబడింది",
+    "locationCaptured": "స్థానం క్యాప్చర్ చేయబడింది",
+    "issueReported": "సమస్య విజయవంతంగా నివేదించబడింది!",
+    "thankYou": "సమాజాన్ని మెరుగుపరచడంలో సహాయం చేసినందుకు ధన్యవాదాలు",
+    "submitting": "సమర్పించబడుతోంది...",
+    "myIssues": "నా సమస్యలు",
+    "searchIssues": "మీ సమస్యలను వెతకండి...",
+    "noIssuesFound": "సమస్యలు కనుగొనబడలేదు",
+    "adjustFilters": "మీ ఫిల్టర్లను సర్దుబాటు చేయడానికి ప్రయత్నించండి",
+    "loadingIssues": "సమస్యలు లోడ్ అవుతున్నాయి...",
+    "issueDetails": "సమస్య వివరాలు",
+    "geminiValidation": "జెమిని ధృవీకరణ",
+    "accepted": "ఆమోదించబడింది",
+    "rejected": "తిరస్కరించబడింది",
+    "reason": "కారణం",
+    "expectedResolution": "ఆశించిన పరిష్కారం",
+    "authority": "అధికారం",
+    "estResolution": "అంచనా పరిష్కారం",
+    "comments": "వ్యాఖ్యలు",
+    "addComment": "వ్యాఖ్య జోడించండి...",
+    "markRead": "చదివినట్లు గుర్తించు",
+    "categories": {
+      "roadMaintenance": "రోడ్డు నిర్వహణ",
+      "wasteManagement": "వ్యర్థ నిర్వహణ",
+      "waterSupply": "నీటి సరఫరా",
+      "electricity": "విద్యుత్తు",
+      "fireSafety": "అగ్ని భద్రత",
+      "publicTransport": "ప్రజా రవాణా",
+      "parksRecreation": "ఉద్యానవనాలు & వినోదం",
+      "streetLighting": "వీధి లైటింగ్",
+      "drainage": "డ్రైనేజీ",
+      "noisePollution": "శబ్ద కాలుష్యం",
+      "illegalConstruction": "చట్టవిరుద్ధ నిర్మాణం",
+      "animalControl": "జంతు నియంత్రణ",
+      "other": "ఇతర"
+    },
+    "statuses": {
+      "pending": "పెండింగ్",
+      "verified": "ధృవీకరించబడింది",
+      "rejected": "తిరస్కరించబడింది",
+      "inProgress": "పురోగతిలో ఉంది",
+      "resolved": "పరిష్కరించబడింది"
+    },
+    "priorities": {
+      "low": "తక్కువ",
+      "medium": "మధ్యస్థ",
+      "high": "అధిక",
+      "urgent": "అత్యవసరం"
+    }
+  },
+  "leaderboard": {
+    "title": "లీడర్బోర్డ్",
+    "subtitle": "టాప్ కమ్యూనిటీ కంట్రిబ్యూటర్లు",
+    "communityImpact": "కమ్యూనిటీ ప్రభావం",
+    "totalIssues": "మొత్తం సమస్యలు",
+    "resolved": "పరిష్కరించబడింది",
+    "contributors": "కంట్రిబ్యూటర్లు",
+    "resolutionRate": "పరిష్కార రేటు",
+    "allRankings": "అన్ని ర్యాంకింగ్లు",
+    "noData": "ఇంకా లీడర్బోర్డ్ డేటా లేదు",
+    "beFirst": "సమస్యను నివేదించే మొదటి వ్యక్తి అవ్వండి!",
+    "loadingLeaderboard": "లీడర్బోర్డ్ లోడ్ అవుతోంది...",
+    "issues": "సమస్యలు",
+    "resolvedCount": "పరిష్కరించబడింది",
+    "pts": "పాయింట్లు"
+  },
+  "profile": {
+    "title": "ప్రొఫైల్",
+    "editProfile": "ప్రొఫైల్ సవరించు",
+    "notifications": "నోటిఫికేషన్లు",
+    "privacySecurity": "గోప్యత & భద్రత",
+    "helpSupport": "సహాయం & మద్దతు",
+    "about": "గురించి",
+    "logout": "లాగౌట్",
+    "version": "వెర్షన్",
+    "issues": "సమస్యలు",
+    "resolved": "పరిష్కరించబడింది",
+    "points": "పాయింట్లు"
+  },
+  "notifications": {
+    "title": "నోటిఫికేషన్లు",
+    "unread": "చదవనిది",
+    "markAllRead": "అన్నింటినీ చదివినట్లు గుర్తించు",
+    "noNotifications": "నోటిఫికేషన్లు లేవు",
+    "allCaughtUp": "మీరు అన్నీ చూశారు! అప్డేట్ల కోసం తరువాత తిరిగి చూడండి.",
+    "loadingNotifications": "నోటిఫికేషన్లు లోడ్ అవుతున్నాయి...",
+    "delete": "తొలగించు",
+    "markRead": "చదివినట్లు గుర్తించు"
+  },
+  "rejection": {
+    "inappropriateContent": {
+      "title": "అనుచితమైన కంటెంట్",
+      "description": "మీ సమర్పణ మా కమ్యూనిటీ మార్గదర్శకాలను ఉల్లంఘించే కంటెంట్ను కలిగి ఉంది."
+    },
+    "spam": {
+      "title": "స్పామ్ గుర్తించబడింది",
+      "description": "ఇది స్పామ్ లేదా డూప్లికేట్ కంటెంట్ అయినట్లు కనిపిస్తోంది."
+    },
+    "insufficientInfo": {
+      "title": "మరింత సమాచారం అవసరం",
+      "description": "మీ నివేదికను ప్రాసెస్ చేయడంలో సహాయపడటానికి దయచేసి మరిన్ని వివరాలను అందించండి."
+    },
+    "contentQuality": {
+      "title": "నాణ్యత ప్రమాణాలు",
+      "description": "మా ప్రమాణాలకు అనుగుణంగా మీ సమర్పణకు మెరుగుదల అవసరం."
+    },
+    "rejectionReason": "తిరస్కరణ కారణం",
+    "howToImprove": "ఎలా మెరుగుపరచాలి",
+    "needHelp": "సహాయం అవసరమా? మా",
+    "communityGuidelines": "కమ్యూనిటీ మార్గదర్శకాలు",
+    "cancel": "రద్దు చేయి",
+    "tryAgain": "మళ్ళీ ప్రయత్నించండి"
+  },
+  "validation": {
+    "required": "ఈ ఫీల్డ్ అవసరం",
+    "invalidEmail": "ఇమెయిల్ చెల్లదు",
+    "invalidPhone": "ఫోన్ నంబర్ చెల్లదు",
+    "passwordTooShort": "పాస్వర్డ్ కనీసం 6 అక్షరాలు ఉండాలి",
+    "passwordsDoNotMatch": "పాస్వర్డ్లు సరిపోలలేదు",
+    "titleRequired": "దయచేసి శీర్షికను నమోదు చేయండి",
+    "categoryRequired": "దయచేసి వర్గాన్ని ఎంచుకోండి",
+    "locationRequired": "దయచేసి స్థానాన్ని జోడించండి"
+  },
+  "toast": {
+    "welcomeBack": "మళ్ళీ స్వాగతం",
+    "welcomeTo": "Voice2Action కు స్వాగతం",
+    "loggedOutSuccess": "విజయవంతంగా లాగౌట్ అయ్యారు",
+    "profileUpdated": "ప్రొఫైల్ విజయవంతంగా అప్డేట్ చేయబడింది",
+    "avatarUpdated": "అవతార్ విజయవంతంగా అప్డేట్ చేయబడింది",
+    "passwordChanged": "పాస్వర్డ్ విజయవంతంగా మార్చబడింది",
+    "resetLinkSent": "మీ ఇమెయిల్కు పాస్వర్డ్ రీసెట్ లింక్ పంపబడింది",
+    "allMarkedRead": "అన్ని నోటిఫికేషన్లు చదివినట్లు గుర్తించబడ్డాయి",
+    "notificationDeleted": "నోటిఫికేషన్ తొలగించబడింది",
+    "failedToLoad": "లోడ్ చేయడంలో విఫలమైంది",
+    "pleaseRetry": "దయచేసి మళ్ళీ ప్రయత్నించండి"
+  }
+}

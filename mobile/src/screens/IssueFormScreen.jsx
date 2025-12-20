@@ -18,11 +18,14 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Geolocation from '@react-native-community/geolocation';
+import { useTranslation } from 'react-i18next';
 import { issuesAPI } from '../utils/api';
 import { ISSUE_CATEGORIES, ISSUE_PRIORITY } from '../utils/constants';
 import Toast from 'react-native-toast-message';
 
 const IssueFormScreen = ({ navigation }) => {
+  const { t } = useTranslation();
+  
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -44,10 +47,10 @@ const IssueFormScreen = ({ navigation }) => {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.CAMERA,
           {
-            title: 'Camera Permission',
-            message: 'App needs camera permission to take photos',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
+            title: t('issues.cameraPermission'),
+            message: t('issues.cameraPermissionMessage'),
+            buttonNeutral: t('common.cancel'),
+            buttonNegative: t('common.cancel'),
             buttonPositive: 'OK',
           },
         );
@@ -67,10 +70,10 @@ const IssueFormScreen = ({ navigation }) => {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
           {
-            title: 'Location Permission',
-            message: 'App needs location permission to tag your issue',
-            buttonNeutral: 'Ask Me Later',
-            buttonNegative: 'Cancel',
+            title: t('issues.locationPermission'),
+            message: t('issues.locationPermissionMessage'),
+            buttonNeutral: t('common.cancel'),
+            buttonNegative: t('common.cancel'),
             buttonPositive: 'OK',
           },
         );
@@ -87,7 +90,7 @@ const IssueFormScreen = ({ navigation }) => {
   const handleTakePhoto = async () => {
     const hasPermission = await requestCameraPermission();
     if (!hasPermission) {
-      Toast.show({ type: 'error', text1: 'Camera permission denied' });
+      Toast.show({ type: 'error', text1: t('issues.cameraPermissionDenied') });
       return;
     }
 
@@ -105,7 +108,7 @@ const IssueFormScreen = ({ navigation }) => {
       } else if (response.errorCode) {
         Toast.show({
           type: 'error',
-          text1: 'Camera Error',
+          text1: t('common.error'),
           text2: response.errorMessage,
         });
       } else if (response.assets && response.assets[0]) {
@@ -118,7 +121,7 @@ const IssueFormScreen = ({ navigation }) => {
           ...prev,
           media: [...prev.media, newMedia],
         }));
-        Toast.show({ type: 'success', text1: 'Photo added successfully' });
+        Toast.show({ type: 'success', text1: t('issues.photoAdded') });
       }
     });
   };
@@ -139,7 +142,7 @@ const IssueFormScreen = ({ navigation }) => {
       } else if (response.errorCode) {
         Toast.show({
           type: 'error',
-          text1: 'Error',
+          text1: t('common.error'),
           text2: response.errorMessage,
         });
       } else if (response.assets) {
@@ -154,7 +157,7 @@ const IssueFormScreen = ({ navigation }) => {
         }));
         Toast.show({
           type: 'success',
-          text1: `${newMedia.length} photo(s) added`,
+          text1: `${newMedia.length} ${t('issues.photosAdded')}`,
         });
       }
     });
@@ -172,7 +175,7 @@ const IssueFormScreen = ({ navigation }) => {
   const getLocation = async () => {
     const hasPermission = await requestLocationPermission();
     if (!hasPermission) {
-      Toast.show({ type: 'error', text1: 'Location permission denied' });
+      Toast.show({ type: 'error', text1: t('issues.locationPermissionDenied') });
       return;
     }
 
@@ -189,22 +192,22 @@ const IssueFormScreen = ({ navigation }) => {
         };
         setFormData(prev => ({ ...prev, location }));
         setLocationLoading(false);
-        Toast.show({ type: 'success', text1: 'Location captured' });
+        Toast.show({ type: 'success', text1: t('issues.locationCaptured') });
       },
       error => {
         console.error('Location error:', error);
         setLocationLoading(false);
-        let errorMsg = 'Unable to get location';
+        let errorMsg = t('issues.locationError');
         if (error.code === 1) {
-          errorMsg = 'Location permission denied';
+          errorMsg = t('issues.locationPermissionDenied');
         } else if (error.code === 2) {
-          errorMsg = 'Location unavailable';
+          errorMsg = t('issues.locationUnavailable');
         } else if (error.code === 3) {
-          errorMsg = 'Location request timed out';
+          errorMsg = t('issues.locationTimeout');
         }
         Toast.show({
           type: 'error',
-          text1: 'Location Error',
+          text1: t('common.error'),
           text2: errorMsg,
         });
       },
@@ -241,28 +244,28 @@ const IssueFormScreen = ({ navigation }) => {
   const generateSuggestions = (category) => {
     const baseSuggestions = {
       inappropriate_content: [
-        'Ensure your content is respectful and appropriate for all users',
-        'Remove any offensive or discriminatory language',
-        'Focus on describing the civic issue objectively',
-        'Review our community guidelines before resubmitting'
+        t('rejection.suggestions.appropriate'),
+        t('rejection.suggestions.removeOffensive'),
+        t('rejection.suggestions.objective'),
+        t('rejection.suggestions.reviewGuidelines')
       ],
       spam: [
-        'Make sure this is a genuine civic issue and not duplicate content',
-        'Provide unique details about your specific situation',
-        'Avoid submitting the same issue multiple times',
-        'Add specific location and time information'
+        t('rejection.suggestions.genuine'),
+        t('rejection.suggestions.uniqueDetails'),
+        t('rejection.suggestions.avoidDuplicate'),
+        t('rejection.suggestions.specificInfo')
       ],
       insufficient_information: [
-        'Provide more specific details about the issue',
-        'Include clear photos showing the problem',
-        'Add the exact location where the issue occurred',
-        'Describe the impact this issue has on the community'
+        t('rejection.suggestions.moreDetails'),
+        t('rejection.suggestions.clearPhotos'),
+        t('rejection.suggestions.exactLocation'),
+        t('rejection.suggestions.describeImpact')
       ],
       content_quality: [
-        'Write a clear and descriptive title',
-        'Provide detailed information about the problem',
-        'Include photos or evidence if available',
-        'Specify the location and urgency of the issue'
+        t('rejection.suggestions.clearTitle'),
+        t('rejection.suggestions.detailedInfo'),
+        t('rejection.suggestions.includePhotos'),
+        t('rejection.suggestions.specifyLocation')
       ]
     };
 
@@ -274,7 +277,7 @@ const IssueFormScreen = ({ navigation }) => {
     const validationDetails = errorData.validationDetails || {};
     
     const rejectionInfo = {
-      reason: validationDetails.reason || errorData.message || 'Your submission did not meet our quality standards.',
+      reason: validationDetails.reason || errorData.message || t('rejection.defaultReason'),
       suggestions: validationDetails.suggestions || [],
       category: determineRejectionCategory(validationDetails),
       severity: validationDetails.severity || 'medium',
@@ -292,15 +295,15 @@ const IssueFormScreen = ({ navigation }) => {
   const handleSubmit = async () => {
     // Validation
     if (!formData.title.trim()) {
-      Toast.show({ type: 'error', text1: 'Please enter a title' });
+      Toast.show({ type: 'error', text1: t('validation.titleRequired') });
       return;
     }
     if (!formData.category) {
-      Toast.show({ type: 'error', text1: 'Please select a category' });
+      Toast.show({ type: 'error', text1: t('validation.categoryRequired') });
       return;
     }
     if (!formData.location) {
-      Toast.show({ type: 'error', text1: 'Please add location' });
+      Toast.show({ type: 'error', text1: t('validation.locationRequired') });
       return;
     }
 
@@ -311,8 +314,8 @@ const IssueFormScreen = ({ navigation }) => {
       formDataToSend.append('description', formData.description.trim());
       formDataToSend.append('category', formData.category);
       formDataToSend.append('priority', formData.priority);
-      // Send location as JSON string
       formDataToSend.append('location', JSON.stringify(formData.location));
+      
       formData.media.forEach((media, index) => {
         formDataToSend.append('media', {
           uri: Platform.OS === 'android' ? media.uri : media.uri.replace('file://', ''),
@@ -320,29 +323,33 @@ const IssueFormScreen = ({ navigation }) => {
           name: media.name || `image_${Date.now()}_${index}.jpg`,
         });
       });
+      
       const response = await issuesAPI.create(formDataToSend);
+      
       if (response?.validationFailed) {
         handleRejection(response);
         return;
       }
+      
       Toast.show({
         type: 'success',
-        text1: 'Issue reported successfully!',
-        text2: 'Thank you for helping improve the community',
+        text1: t('issues.issueReported'),
+        text2: t('issues.thankYou'),
       });
       navigation.navigate('IssueTracking');
     } catch (error) {
       console.error('Submit error:', error);
-      console.error('Error response:', error.response?.data);
+      
       if (error?.response?.data?.validationFailed) {
         handleRejection(error.response.data);
         return;
       }
+      
       const errorMsg =
         error.response?.data?.message ||
         error.response?.data?.error ||
-        'Failed to report issue';
-      Toast.show({ type: 'error', text1: 'Error', text2: errorMsg });
+        t('issues.submitFailed');
+      Toast.show({ type: 'error', text1: t('common.error'), text2: errorMsg });
     } finally {
       setLoading(false);
     }
@@ -353,8 +360,8 @@ const IssueFormScreen = ({ navigation }) => {
     setShowRejectionModal(false);
     Toast.show({
       type: 'info',
-      text1: 'Ready to improve',
-      text2: 'Please update your submission based on the suggestions'
+      text1: t('rejection.readyToImprove'),
+      text2: t('rejection.updateSubmission')
     });
   };
 
@@ -369,7 +376,7 @@ const IssueFormScreen = ({ navigation }) => {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Category</Text>
+            <Text style={styles.modalTitle}>{t('issues.selectCategory')}</Text>
             <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
               <Icon name="close" size={24} color="#1f2937" />
             </TouchableOpacity>
@@ -404,7 +411,7 @@ const IssueFormScreen = ({ navigation }) => {
                         styles.categoryOptionTextSelected,
                     ]}
                   >
-                    {cat.label}
+                    {t(`issues.categories.${cat.value.replace(/_/g, '')}`)}
                   </Text>
                 </View>
                 {formData.category === cat.value && (
@@ -447,41 +454,38 @@ const IssueFormScreen = ({ navigation }) => {
     const getCategoryConfig = () => {
       const category = rejectionData?.category || 'content_quality';
       
-      switch (category) {
-        case 'inappropriate_content':
-          return {
-            icon: 'warning',
-            gradient: ['#ef4444', '#dc2626'],
-            color: '#ef4444',
-            title: 'Inappropriate Content',
-            description: 'Your submission contains content that violates our community guidelines.'
-          };
-        case 'spam':
-          return {
-            icon: 'ban',
-            gradient: ['#f59e0b', '#d97706'],
-            color: '#f59e0b',
-            title: 'Spam Detected',
-            description: 'This appears to be spam or duplicate content.'
-          };
-        case 'insufficient_information':
-          return {
-            icon: 'information-circle',
-            gradient: ['#3b82f6', '#2563eb'],
-            color: '#3b82f6',
-            title: 'More Information Needed',
-            description: 'Please provide more details to help us process your report.'
-          };
-        case 'content_quality':
-        default:
-          return {
-            icon: 'alert-circle',
-            gradient: ['#8b5cf6', '#7c3aed'],
-            color: '#8b5cf6',
-            title: 'Quality Standards',
-            description: 'Your submission needs improvement to meet our standards.'
-          };
-      }
+      const configs = {
+        inappropriate_content: {
+          icon: 'warning',
+          gradient: ['#ef4444', '#dc2626'],
+          color: '#ef4444',
+          title: t('rejection.inappropriateContent.title'),
+          description: t('rejection.inappropriateContent.description')
+        },
+        spam: {
+          icon: 'ban',
+          gradient: ['#f59e0b', '#d97706'],
+          color: '#f59e0b',
+          title: t('rejection.spam.title'),
+          description: t('rejection.spam.description')
+        },
+        insufficient_information: {
+          icon: 'information-circle',
+          gradient: ['#3b82f6', '#2563eb'],
+          color: '#3b82f6',
+          title: t('rejection.insufficientInfo.title'),
+          description: t('rejection.insufficientInfo.description')
+        },
+        content_quality: {
+          icon: 'alert-circle',
+          gradient: ['#8b5cf6', '#7c3aed'],
+          color: '#8b5cf6',
+          title: t('rejection.contentQuality.title'),
+          description: t('rejection.contentQuality.description')
+        }
+      };
+      
+      return configs[category] || configs.content_quality;
     };
 
     if (!rejectionData) return null;
@@ -542,7 +546,7 @@ const IssueFormScreen = ({ navigation }) => {
                 <View style={styles.rejectionReasonCard}>
                   <View style={styles.rejectionReasonHeader}>
                     <Icon name="document-text" size={20} color={config.color} />
-                    <Text style={styles.rejectionReasonTitle}>Rejection Reason</Text>
+                    <Text style={styles.rejectionReasonTitle}>{t('rejection.rejectionReason')}</Text>
                   </View>
                   <Text style={styles.rejectionReasonText}>{reason}</Text>
                 </View>
@@ -550,7 +554,7 @@ const IssueFormScreen = ({ navigation }) => {
                 <View style={styles.rejectionSuggestionsSection}>
                   <View style={styles.rejectionSuggestionsHeader}>
                     <Icon name="bulb" size={20} color="#fbbf24" />
-                    <Text style={styles.rejectionSuggestionsTitle}>How to Improve</Text>
+                    <Text style={styles.rejectionSuggestionsTitle}>{t('rejection.howToImprove')}</Text>
                   </View>
 
                   {suggestions.map((suggestion, index) => (
@@ -566,8 +570,8 @@ const IssueFormScreen = ({ navigation }) => {
                 <View style={styles.rejectionHelpSection}>
                   <Icon name="help-circle-outline" size={18} color="#6b7280" />
                   <Text style={styles.rejectionHelpText}>
-                    Need help? Check our{' '}
-                    <Text style={styles.rejectionHelpLink}>community guidelines</Text>
+                    {t('rejection.needHelp')}{' '}
+                    <Text style={styles.rejectionHelpLink}>{t('rejection.communityGuidelines')}</Text>
                   </Text>
                 </View>
               </View>
@@ -581,14 +585,14 @@ const IssueFormScreen = ({ navigation }) => {
                   navigation.goBack();
                 }}
               >
-                <Text style={styles.rejectionSecondaryButtonText}>Cancel</Text>
+                <Text style={styles.rejectionSecondaryButtonText}>{t('rejection.cancel')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
                 style={[styles.rejectionPrimaryButton, { backgroundColor: config.color }]}
                 onPress={handleRetry}
               >
-                <Text style={styles.rejectionPrimaryButtonText}>Try Again</Text>
+                <Text style={styles.rejectionPrimaryButtonText}>{t('rejection.tryAgain')}</Text>
                 <Icon name="arrow-forward" size={18} color="#ffffff" />
               </TouchableOpacity>
             </View>
@@ -605,12 +609,12 @@ const IssueFormScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="close" size={24} color="#1f2937" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Report Issue</Text>
+        <Text style={styles.headerTitle}>{t('issues.reportIssue')}</Text>
         <TouchableOpacity onPress={handleSubmit} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#2563eb" />
           ) : (
-            <Text style={styles.submitText}>Submit</Text>
+            <Text style={styles.submitText}>{t('common.submit')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -618,10 +622,10 @@ const IssueFormScreen = ({ navigation }) => {
       <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
         {/* Title */}
         <View style={styles.field}>
-          <Text style={styles.label}>Title *</Text>
+          <Text style={styles.label}>{t('issues.title')} *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Brief description of the issue"
+            placeholder={t('issues.briefDescription')}
             placeholderTextColor="#9ca3af"
             value={formData.title}
             onChangeText={text => setFormData({ ...formData, title: text })}
@@ -630,10 +634,10 @@ const IssueFormScreen = ({ navigation }) => {
 
         {/* Description */}
         <View style={styles.field}>
-          <Text style={styles.label}>Description</Text>
+          <Text style={styles.label}>{t('issues.description')}</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Detailed description..."
+            placeholder={t('issues.detailedDescription')}
             placeholderTextColor="#9ca3af"
             value={formData.description}
             onChangeText={text =>
@@ -646,7 +650,7 @@ const IssueFormScreen = ({ navigation }) => {
 
         {/* Category */}
         <View style={styles.field}>
-          <Text style={styles.label}>Category *</Text>
+          <Text style={styles.label}>{t('issues.category')} *</Text>
           <TouchableOpacity
             style={styles.categorySelector}
             onPress={() => setShowCategoryModal(true)}
@@ -659,14 +663,14 @@ const IssueFormScreen = ({ navigation }) => {
                   color="#2563eb"
                 />
                 <Text style={styles.categorySelectorText}>
-                  {getSelectedCategory()?.label || 'Select a category'}
+                  {t(`issues.categories.${formData.category.replace(/_/g, '')}`)}
                 </Text>
               </View>
             ) : (
               <View style={styles.categorySelectorContent}>
                 <Icon name="list-outline" size={24} color="#9ca3af" />
                 <Text style={styles.categorySelectorPlaceholder}>
-                  Select a category
+                  {t('issues.selectCategory')}
                 </Text>
               </View>
             )}
@@ -676,7 +680,7 @@ const IssueFormScreen = ({ navigation }) => {
 
         {/* Priority */}
         <View style={styles.field}>
-          <Text style={styles.label}>Priority</Text>
+          <Text style={styles.label}>{t('issues.priority')}</Text>
           <View style={styles.priorityRow}>
             {ISSUE_PRIORITY.map(p => (
               <TouchableOpacity
@@ -693,7 +697,7 @@ const IssueFormScreen = ({ navigation }) => {
                     formData.priority === p.value && styles.priorityTextActive,
                   ]}
                 >
-                  {p.label}
+                  {t(`issues.priorities.${p.value}`)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -703,7 +707,7 @@ const IssueFormScreen = ({ navigation }) => {
         {/* Media Upload */}
         <View style={styles.field}>
           <Text style={styles.label}>
-            Photos/Videos ({formData.media.length}/5)
+            {t('issues.media')} ({formData.media.length}/5)
           </Text>
           <View style={styles.mediaButtons}>
             <TouchableOpacity
@@ -712,7 +716,7 @@ const IssueFormScreen = ({ navigation }) => {
               disabled={formData.media.length >= 5}
             >
               <Icon name="camera" size={24} color="#2563eb" />
-              <Text style={styles.mediaButtonText}>Camera</Text>
+              <Text style={styles.mediaButtonText}>{t('issues.camera')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.mediaButton}
@@ -720,7 +724,7 @@ const IssueFormScreen = ({ navigation }) => {
               disabled={formData.media.length >= 5}
             >
               <Icon name="images" size={24} color="#2563eb" />
-              <Text style={styles.mediaButtonText}>Gallery</Text>
+              <Text style={styles.mediaButtonText}>{t('issues.gallery')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -741,7 +745,7 @@ const IssueFormScreen = ({ navigation }) => {
                   ) : media.type?.startsWith('audio') ? (
                     <View style={styles.audioPreview}>
                       <Icon name="mic" size={32} color="#2563eb" />
-                      <Text style={styles.audioText}>Voice</Text>
+                      <Text style={styles.audioText}>{t('issues.voice')}</Text>
                     </View>
                   ) : null}
                   <TouchableOpacity
@@ -758,7 +762,7 @@ const IssueFormScreen = ({ navigation }) => {
 
         {/* Location */}
         <View style={styles.field}>
-          <Text style={styles.label}>Location *</Text>
+          <Text style={styles.label}>{t('issues.location')} *</Text>
           <TouchableOpacity
             style={[
               styles.locationButton,
@@ -783,8 +787,8 @@ const IssueFormScreen = ({ navigation }) => {
                   ]}
                 >
                   {formData.location
-                    ? `Location: ${formData.location.address}`
-                    : 'Add Current Location'}
+                    ? `${t('issues.locationAdded')}: ${formData.location.address}`
+                    : t('issues.addLocation')}
                 </Text>
               </>
             )}

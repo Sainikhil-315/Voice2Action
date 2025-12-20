@@ -1,150 +1,88 @@
-// App.js - FIXED VERSION
+// mobile/App.js
 import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar, Platform } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Toast from 'react-native-toast-message';
+import SplashScreen from 'react-native-splash-screen';
 
-// Context Providers
+// Import i18n configuration
+import './src/i18n';
+
+// Import Contexts
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 
-// Screens
+// Import Screens
 import HomeScreen from './src/screens/HomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
+import IssueFormScreen from './src/screens/IssueFormScreen';
 import IssueTrackingScreen from './src/screens/IssueTrackingScreen';
 import IssueDetailScreen from './src/screens/IssueDetailScreen';
-import IssueFormScreen from './src/screens/IssueFormScreen';
-import ProfileScreen from './src/screens/ProfileScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
 import NotificationScreen from './src/screens/NotificationScreen';
 
-const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
-// Tab Navigator for authenticated users
-const MainTabs = () => {
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName;
+const AuthStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Home" component={HomeScreen} />
+    <Stack.Screen name="Login" component={LoginScreen} />
+    <Stack.Screen name="Register" component={RegisterScreen} />
+  </Stack.Navigator>
+);
 
-          switch (route.name) {
-            case 'Dashboard':
-              iconName = focused ? 'grid' : 'grid-outline';
-              break;
-            case 'Issues':
-              iconName = focused ? 'alert-circle' : 'alert-circle-outline';
-              break;
-            case 'Report':
-              iconName = focused ? 'add-circle' : 'add-circle-outline';
-              break;
-            case 'Leaderboard':
-              iconName = focused ? 'trophy' : 'trophy-outline';
-              break;
-            case 'Profile':
-              iconName = focused ? 'person' : 'person-outline';
-              break;
-            default:
-              iconName = 'circle';
-          }
+const MainStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="Dashboard" component={DashboardScreen} />
+    <Stack.Screen name="IssueForm" component={IssueFormScreen} />
+    <Stack.Screen name="IssueTracking" component={IssueTrackingScreen} />
+    <Stack.Screen name="IssueDetail" component={IssueDetailScreen} />
+    <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+    <Stack.Screen name="Profile" component={ProfileScreen} />
+    <Stack.Screen name="Notifications" component={NotificationScreen} />
+  </Stack.Navigator>
+);
 
-          return <Icon name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#2563eb',
-        tabBarInactiveTintColor: '#6b7280',
-        tabBarStyle: {
-          height: Platform.OS === 'ios' ? 88 : 60,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
-          paddingTop: 8,
-        },
-        headerShown: false,
-      })}
-    >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} />
-      <Tab.Screen name="Issues" component={IssueTrackingScreen} />
-      <Tab.Screen
-        name="Report"
-        component={IssueFormScreen}
-        options={{
-          tabBarIcon: ({ color }) => (
-            <Icon name="add-circle" size={56} color="#2563eb" />
-          ),
-          tabBarIconStyle: {
-            marginTop: -20,
-          },
-        }}
-      />
-      <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
-  );
-};
-
-// Auth Stack for non-authenticated users
-const AuthStack = () => {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      {/* <Stack.Screen name="Notifications" component={NotificationScreen} />
-      <Stack.Screen name="IssueForm" component={IssueFormScreen} />
-      <Stack.Screen name="IssueTracking" component={IssueTrackingScreen} /> */}
-    </Stack.Navigator>
-  );
-};
-
-// Main App Navigator
-const AppNavigator = () => {
+const Navigation = () => {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return null; // You can add a splash screen here
+    return null; // Or a loading screen
   }
 
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      {isAuthenticated ? (
-        <>
-          <Stack.Screen name="MainTabs" component={MainTabs} />
-          <Stack.Screen name="IssueDetail" component={IssueDetailScreen} />
-          <Stack.Screen name="Notifications" component={NotificationScreen} />
-          <Stack.Screen name="IssueForm" component={IssueFormScreen} />
-          <Stack.Screen name="IssueTracking" component={IssueTrackingScreen} />
-        </>
-      ) : (
-        <Stack.Screen name="Auth" component={AuthStack} />
-      )}
-    </Stack.Navigator>
+    <NavigationContainer>
+      {isAuthenticated ? <MainStack /> : <AuthStack />}
+    </NavigationContainer>
   );
 };
 
 const App = () => {
+  useEffect(() => {
+    // Hide splash screen when app is ready
+    if (Platform.OS !== 'web') {
+      SplashScreen?.hide();
+    }
+  }, []);
+
   return (
-    <AuthProvider>
-      <SocketProvider>
-        <NotificationProvider>
-          <NavigationContainer>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-            <AppNavigator />
-          </NavigationContainer>
-        </NotificationProvider>
-      </SocketProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <AuthProvider>
+        <SocketProvider>
+          <NotificationProvider>
+            <Navigation />
+            <Toast />
+          </NotificationProvider>
+        </SocketProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 };
 

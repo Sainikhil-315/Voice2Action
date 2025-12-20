@@ -1,0 +1,278 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "viewAll": "View All",
+    "tryAgain": "Try Again",
+    "required": "Required"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email Address",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "fullName": "Full Name",
+    "phone": "Phone Number",
+    "welcomeBack": "Welcome Back",
+    "signInToContinue": "Sign in to continue",
+    "createAccount": "Create Account",
+    "joinToday": "Join Voice2Action today",
+    "forgotPassword": "Forgot Password?",
+    "dontHaveAccount": "Don't have an account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "optional": "Optional",
+    "passwordHelper": "Must be 8+ characters with uppercase, lowercase, and number",
+    "termsAgree": "By creating an account, you agree to our",
+    "termsOfService": "Terms of Service",
+    "and": "and",
+    "privacyPolicy": "Privacy Policy",
+    "logoutConfirm": "Are you sure you want to logout?",
+    "loginFailed": "Login failed",
+    "registrationFailed": "Registration failed"
+  },
+  "home": {
+    "title": "Voice Your Civic Concerns",
+    "subtitle": "Report issues with photos, videos, and voice. Track progress in real-time.",
+    "getStarted": "Get Started",
+    "powerfulFeatures": "Powerful Features",
+    "featuresSubtitle": "Everything you need to report and track civic issues",
+    "howItWorks": "How It Works",
+    "readyToMakeDifference": "Ready to Make a Difference?",
+    "joinThousands": "Join thousands improving their communities",
+    "startReporting": "Start Reporting Issues",
+    "features": {
+      "multimedia": {
+        "title": "Multi-Media Reporting",
+        "description": "Report with photos, videos, or voice"
+      },
+      "gps": {
+        "title": "GPS Location",
+        "description": "Auto-tag locations precisely"
+      },
+      "realtime": {
+        "title": "Real-Time Updates",
+        "description": "Get instant notifications"
+      },
+      "tracking": {
+        "title": "Track Progress",
+        "description": "Monitor from start to resolution"
+      }
+    },
+    "steps": {
+      "report": {
+        "title": "Report Issue",
+        "description": "Take a photo or record details"
+      },
+      "review": {
+        "title": "Admin Reviews",
+        "description": "Verification and forwarding"
+      },
+      "action": {
+        "title": "Authority Acts",
+        "description": "Work begins on resolution"
+      },
+      "track": {
+        "title": "Track Progress",
+        "description": "Real-time status updates"
+      }
+    },
+    "stats": {
+      "issuesReported": "Issues Reported",
+      "issuesResolved": "Issues Resolved",
+      "successRate": "Success Rate"
+    }
+  },
+  "dashboard": {
+    "welcome": "Welcome back",
+    "myIssues": "My Issues",
+    "resolved": "Resolved",
+    "pending": "Pending",
+    "quickActions": "Quick Actions",
+    "reportIssue": "Report Issue",
+    "myIssuesList": "My Issues",
+    "leaderboard": "Leaderboard",
+    "profile": "Profile",
+    "recentIssues": "Recent Issues",
+    "noIssuesYet": "No issues yet",
+    "reportFirstIssue": "Report First Issue",
+    "communityImpact": "Community Impact",
+    "totalIssues": "Total Issues",
+    "resolutionRate": "Success Rate",
+    "yourRank": "Your Community Rank",
+    "points": "Points",
+    "issues": "Issues",
+    "loadingDashboard": "Loading dashboard..."
+  },
+  "issues": {
+    "title": "Title",
+    "description": "Description",
+    "category": "Category",
+    "priority": "Priority",
+    "location": "Location",
+    "status": "Status",
+    "media": "Photos/Videos",
+    "reportIssue": "Report Issue",
+    "briefDescription": "Brief description of the issue",
+    "detailedDescription": "Detailed description...",
+    "selectCategory": "Select a category",
+    "allCategories": "All Categories",
+    "camera": "Camera",
+    "gallery": "Gallery",
+    "addLocation": "Add Current Location",
+    "locationAdded": "Location",
+    "cameraPermissionDenied": "Camera permission denied",
+    "locationPermissionDenied": "Location permission denied",
+    "photoAdded": "Photo added successfully",
+    "locationCaptured": "Location captured",
+    "issueReported": "Issue reported successfully!",
+    "thankYou": "Thank you for helping improve the community",
+    "submitting": "Submitting...",
+    "myIssues": "My Issues",
+    "searchIssues": "Search your issues...",
+    "noIssuesFound": "No Issues Found",
+    "adjustFilters": "Try adjusting your filters",
+    "loadingIssues": "Loading issues...",
+    "issueDetails": "Issue Details",
+    "geminiValidation": "Gemini Validation",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "reason": "Reason",
+    "expectedResolution": "Expected Resolution",
+    "authority": "Authority",
+    "estResolution": "Est. Resolution",
+    "comments": "Comments",
+    "addComment": "Add a comment...",
+    "markRead": "Mark Read",
+    "categories": {
+      "roadMaintenance": "Road Maintenance",
+      "wasteManagement": "Waste Management",
+      "waterSupply": "Water Supply",
+      "electricity": "Electricity",
+      "fireSafety": "Fire Safety",
+      "publicTransport": "Public Transport",
+      "parksRecreation": "Parks & Recreation",
+      "streetLighting": "Street Lighting",
+      "drainage": "Drainage",
+      "noisePollution": "Noise Pollution",
+      "illegalConstruction": "Illegal Construction",
+      "animalControl": "Animal Control",
+      "other": "Other"
+    },
+    "statuses": {
+      "pending": "Pending",
+      "verified": "Verified",
+      "rejected": "Rejected",
+      "inProgress": "In Progress",
+      "resolved": "Resolved"
+    },
+    "priorities": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    }
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "subtitle": "Top Community Contributors",
+    "communityImpact": "Community Impact",
+    "totalIssues": "Total Issues",
+    "resolved": "Resolved",
+    "contributors": "Contributors",
+    "resolutionRate": "Resolution Rate",
+    "allRankings": "All Rankings",
+    "noData": "No leaderboard data yet",
+    "beFirst": "Be the first to report an issue!",
+    "loadingLeaderboard": "Loading leaderboard...",
+    "issues": "issues",
+    "resolvedCount": "resolved",
+    "pts": "pts"
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit Profile",
+    "notifications": "Notifications",
+    "privacySecurity": "Privacy & Security",
+    "helpSupport": "Help & Support",
+    "about": "About",
+    "logout": "Logout",
+    "version": "Version",
+    "issues": "Issues",
+    "resolved": "Resolved",
+    "points": "Points"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "unread": "unread",
+    "markAllRead": "Mark All Read",
+    "noNotifications": "No Notifications",
+    "allCaughtUp": "You're all caught up! Check back later for updates.",
+    "loadingNotifications": "Loading notifications...",
+    "delete": "Delete",
+    "markRead": "Mark Read"
+  },
+  "rejection": {
+    "inappropriateContent": {
+      "title": "Inappropriate Content",
+      "description": "Your submission contains content that violates our community guidelines."
+    },
+    "spam": {
+      "title": "Spam Detected",
+      "description": "This appears to be spam or duplicate content."
+    },
+    "insufficientInfo": {
+      "title": "More Information Needed",
+      "description": "Please provide more details to help us process your report."
+    },
+    "contentQuality": {
+      "title": "Quality Standards",
+      "description": "Your submission needs improvement to meet our standards."
+    },
+    "rejectionReason": "Rejection Reason",
+    "howToImprove": "How to Improve",
+    "needHelp": "Need help? Check our",
+    "communityGuidelines": "community guidelines",
+    "cancel": "Cancel",
+    "tryAgain": "Try Again"
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidEmail": "Email is invalid",
+    "invalidPhone": "Phone number is invalid",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "titleRequired": "Please enter a title",
+    "categoryRequired": "Please select a category",
+    "locationRequired": "Please add location"
+  },
+  "toast": {
+    "welcomeBack": "Welcome back",
+    "welcomeTo": "Welcome to Voice2Action",
+    "loggedOutSuccess": "Logged out successfully",
+    "profileUpdated": "Profile updated successfully",
+    "avatarUpdated": "Avatar updated successfully",
+    "passwordChanged": "Password changed successfully",
+    "resetLinkSent": "Password reset link sent to your email",
+    "allMarkedRead": "All notifications marked as read",
+    "notificationDeleted": "Notification deleted",
+    "failedToLoad": "Failed to load",
+    "pleaseRetry": "Please try again"
+  }
+}

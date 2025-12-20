@@ -12,15 +12,18 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { issuesAPI, leaderboardAPI } from '../utils/api';
 import { formatNumber, formatRelativeTime } from '../utils/helpers';
 import Toast from 'react-native-toast-message';
+import LanguageSelector from '../components/LanguageSelector';
 
 const { width } = Dimensions.get('window');
 
 const DashboardScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const [loading, setLoading] = useState(true);
@@ -33,14 +36,12 @@ const DashboardScreen = ({ navigation }) => {
     if (!isRefresh) setLoading(true);
 
     try {
-      // Fetch all data in parallel
       const [statsRes, issuesRes, rankRes] = await Promise.all([
         issuesAPI.getStats(),
         issuesAPI.getMyIssues({ limit: 5, sort: '-createdAt' }),
         leaderboardAPI.getUserHistory(user.id),
       ]);
 
-      // Extract data properly based on API response structure
       const statsData = statsRes.data?.data || statsRes.data;
       const issuesData = issuesRes.data?.data?.issues || [];
       const rankData = rankRes.data?.data || rankRes.data;
@@ -52,14 +53,14 @@ const DashboardScreen = ({ navigation }) => {
       console.error('Failed to load dashboard:', error);
       Toast.show({
         type: 'error',
-        text1: 'Failed to load dashboard',
-        text2: error.response?.data?.message || 'Please try again',
+        text1: t('toast.failedToLoad'),
+        text2: error.response?.data?.message || t('toast.pleaseRetry'),
       });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user.id]);
+  }, [user.id, t]);
 
   useEffect(() => {
     loadDashboardData();
@@ -88,25 +89,25 @@ const DashboardScreen = ({ navigation }) => {
   const quickActions = [
     {
       icon: 'add-circle',
-      label: 'Report Issue',
+      label: t('dashboard.reportIssue'),
       color: '#2563eb',
       onPress: () => navigation.navigate('IssueForm'),
     },
     {
       icon: 'list',
-      label: 'My Issues',
+      label: t('dashboard.myIssuesList'),
       color: '#f59e0b',
       onPress: () => navigation.navigate('IssueTracking'),
     },
     {
       icon: 'trophy',
-      label: 'Leaderboard',
+      label: t('dashboard.leaderboard'),
       color: '#8b5cf6',
       onPress: () => navigation.navigate('Leaderboard'),
     },
     {
       icon: 'person',
-      label: 'Profile',
+      label: t('dashboard.profile'),
       color: '#10b981',
       onPress: () => navigation.navigate('Profile'),
     },
@@ -116,7 +117,7 @@ const DashboardScreen = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
+        <Text style={styles.loadingText}>{t('dashboard.loadingDashboard')}</Text>
       </View>
     );
   }
@@ -131,22 +132,25 @@ const DashboardScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Welcome back,</Text>
+          <Text style={styles.greeting}>{t('dashboard.welcome')},</Text>
           <Text style={styles.userName}>{user?.name}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.notificationButton}
-          onPress={() => navigation.navigate('Notifications')}
-        >
-          <Icon name="notifications-outline" size={24} color="#1f2937" />
-          {unreadCount > 0 && (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <LanguageSelector style={styles.languageButton} />
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <Icon name="notifications-outline" size={24} color="#1f2937" />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stats Cards */}
@@ -157,7 +161,7 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.statValue}>
               {formatNumber(userRank?.totalIssues || 0)}
             </Text>
-            <Text style={styles.statLabel}>My Issues</Text>
+            <Text style={styles.statLabel}>{t('dashboard.myIssues')}</Text>
           </LinearGradient>
 
           <LinearGradient colors={['#10b981', '#059669']} style={styles.statCard}>
@@ -165,7 +169,7 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.statValue}>
               {formatNumber(userRank?.resolvedIssues || 0)}
             </Text>
-            <Text style={styles.statLabel}>Resolved</Text>
+            <Text style={styles.statLabel}>{t('dashboard.resolved')}</Text>
           </LinearGradient>
 
           <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.statCard}>
@@ -173,7 +177,7 @@ const DashboardScreen = ({ navigation }) => {
             <Text style={styles.statValue}>
               {formatNumber(stats?.overview?.pending || 0)}
             </Text>
-            <Text style={styles.statLabel}>Pending</Text>
+            <Text style={styles.statLabel}>{t('dashboard.pending')}</Text>
           </LinearGradient>
         </View>
       )}
@@ -189,7 +193,7 @@ const DashboardScreen = ({ navigation }) => {
               <Icon name="trophy" size={24} color="#fbbf24" />
             </View>
             <View style={styles.rankInfo}>
-              <Text style={styles.rankTitle}>Your Community Rank</Text>
+              <Text style={styles.rankTitle}>{t('dashboard.yourRank')}</Text>
               <Text style={styles.rankValue}>#{userRank.rank || 'N/A'}</Text>
             </View>
           </View>
@@ -198,14 +202,14 @@ const DashboardScreen = ({ navigation }) => {
               <Text style={styles.rankDetailValue}>
                 {formatNumber(userRank.stats?.totalPoints || 0)}
               </Text>
-              <Text style={styles.rankDetailLabel}>Points</Text>
+              <Text style={styles.rankDetailLabel}>{t('dashboard.points')}</Text>
             </View>
             <View style={styles.rankDivider} />
             <View style={styles.rankDetailItem}>
               <Text style={styles.rankDetailValue}>
                 {formatNumber(userRank.totalIssues || 0)}
               </Text>
-              <Text style={styles.rankDetailLabel}>Issues</Text>
+              <Text style={styles.rankDetailLabel}>{t('dashboard.issues')}</Text>
             </View>
           </View>
         </TouchableOpacity>
@@ -213,7 +217,7 @@ const DashboardScreen = ({ navigation }) => {
 
       {/* Quick Actions */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <Text style={styles.sectionTitle}>{t('dashboard.quickActions')}</Text>
         <View style={styles.quickActionsGrid}>
           {quickActions.map((action, index) => (
             <TouchableOpacity
@@ -238,21 +242,21 @@ const DashboardScreen = ({ navigation }) => {
       {/* Recent Issues */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Issues</Text>
+          <Text style={styles.sectionTitle}>{t('dashboard.recentIssues')}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('IssueTracking')}>
-            <Text style={styles.sectionLink}>View All</Text>
+            <Text style={styles.sectionLink}>{t('common.viewAll')}</Text>
           </TouchableOpacity>
         </View>
 
         {recentIssues.length === 0 ? (
           <View style={styles.emptyState}>
             <Icon name="alert-circle-outline" size={48} color="#9ca3af" />
-            <Text style={styles.emptyStateText}>No issues yet</Text>
+            <Text style={styles.emptyStateText}>{t('dashboard.noIssuesYet')}</Text>
             <TouchableOpacity
               style={styles.emptyStateButton}
               onPress={() => navigation.navigate('IssueForm')}
             >
-              <Text style={styles.emptyStateButtonText}>Report First Issue</Text>
+              <Text style={styles.emptyStateButtonText}>{t('dashboard.reportFirstIssue')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -281,7 +285,7 @@ const DashboardScreen = ({ navigation }) => {
                         { color: getStatusColor(issue.status) },
                       ]}
                     >
-                      {issue.status.replace('_', ' ')}
+                      {t(`issues.statuses.${issue.status.replace('_', '')}`)}
                     </Text>
                   </View>
                 </View>
@@ -314,7 +318,7 @@ const DashboardScreen = ({ navigation }) => {
       {/* Community Impact */}
       {stats && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Community Impact</Text>
+          <Text style={styles.sectionTitle}>{t('dashboard.communityImpact')}</Text>
           <View style={styles.impactGrid}>
             <View style={styles.impactCard}>
               <View style={styles.impactIcon}>
@@ -323,7 +327,7 @@ const DashboardScreen = ({ navigation }) => {
               <Text style={styles.impactValue}>
                 {formatNumber(stats.overview?.total || 0)}
               </Text>
-              <Text style={styles.impactLabel}>Total Issues</Text>
+              <Text style={styles.impactLabel}>{t('dashboard.totalIssues')}</Text>
             </View>
 
             <View style={styles.impactCard}>
@@ -333,7 +337,7 @@ const DashboardScreen = ({ navigation }) => {
               <Text style={styles.impactValue}>
                 {formatNumber(stats.overview?.resolved || 0)}
               </Text>
-              <Text style={styles.impactLabel}>Resolved</Text>
+              <Text style={styles.impactLabel}>{t('dashboard.resolved')}</Text>
             </View>
 
             <View style={styles.impactCard}>
@@ -343,7 +347,7 @@ const DashboardScreen = ({ navigation }) => {
               <Text style={styles.impactValue}>
                 {stats.overview?.resolutionRate || 0}%
               </Text>
-              <Text style={styles.impactLabel}>Success Rate</Text>
+              <Text style={styles.impactLabel}>{t('dashboard.resolutionRate')}</Text>
             </View>
           </View>
         </View>
@@ -375,6 +379,14 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
     backgroundColor: '#ffffff',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  languageButton: {
+    marginRight: 0,
   },
   greeting: {
     fontSize: 14,

@@ -39,19 +39,19 @@ const HomeScreen = ({ navigation }) => {
       color: '#3b82f6',
     },
     {
-      icon: 'map-marker',
+      icon: 'location',
       title: 'GPS Location',
       description: 'Auto-tag locations precisely',
       color: '#10b981',
     },
     {
-      icon: 'bell',
+      icon: 'notifications',
       title: 'Real-Time Updates',
       description: 'Get instant notifications',
       color: '#f59e0b',
     },
     {
-      icon: 'chart-line',
+      icon: 'chatbubbles',
       title: 'Track Progress',
       description: 'Monitor from start to resolution',
       color: '#8b5cf6',
@@ -77,7 +77,7 @@ const HomeScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('Register')}
             >
               <Text style={styles.primaryButtonText}>Get Started</Text>
-              <Icon name="arrow-right" size={20} color="#1f2937" />
+              <Icon name="arrow-forward" size={20} color="#1f2937" />
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -168,7 +168,7 @@ const HomeScreen = ({ navigation }) => {
           onPress={() => navigation.navigate('Register')}
         >
           <Text style={styles.ctaButtonText}>Start Reporting Issues</Text>
-          <Icon name="arrow-right" size={20} color="#1f2937" />
+          <Icon name="arrow-forward" size={20} color="#1f2937" />
         </TouchableOpacity>
       </LinearGradient>
     </ScrollView>
