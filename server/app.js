@@ -15,6 +15,7 @@ const authorityRoutes = require('./routes/authorities');
 const leaderboardRoutes = require('./routes/leaderboard');
 const feedbackRoutes = require('./routes/feedback');
 const notificationRoutes = require('./routes/notifications');
+const sensorIssueRoutes = require('./routes/sensorIssues');
 
 const app = express();
 
@@ -143,6 +144,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // API routes
+app.use('/api/issue', sensorIssueRoutes);
 app.use('/api/auth', authRoutes); // write authLimiter middleware for handling ratelimitter
 app.use('/api/issues', issueRoutes);
 app.use('/api/admin', adminRoutes);
