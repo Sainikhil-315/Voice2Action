@@ -162,17 +162,26 @@
     "markRead": "पढ़ा हुआ चिह्नित करें",
     "categories": {
       "roadMaintenance": "सड़क रखरखाव",
+      "roadmaintenance": "सड़क रखरखाव",
       "wasteManagement": "कचरा प्रबंधन",
+      "wastemanagement": "कचरा प्रबंधन",
       "waterSupply": "जल आपूर्ति",
+      "watersupply": "जल आपूर्ति",
       "electricity": "बिजली",
       "fireSafety": "अग्नि सुरक्षा",
       "publicTransport": "सार्वजनिक परिवहन",
+      "publictransport": "सार्वजनिक परिवहन",
       "parksRecreation": "पार्क और मनोरंजन",
+      "parksrecreation": "पार्क और मनोरंजन",
       "streetLighting": "सड़क प्रकाश",
+      "streetlighting": "सड़क प्रकाश",
       "drainage": "जल निकासी",
       "noisePollution": "ध्वनि प्रदूषण",
+      "noisepollution": "ध्वनि प्रदूषण",
       "illegalConstruction": "अवैध निर्माण",
+      "illegalconstruction": "अवैध निर्माण",
       "animalControl": "पशु नियंत्रण",
+      "animalcontrol": "पशु नियंत्रण",
       "other": "अन्य"
     },
     "statuses": {
@@ -180,7 +189,8 @@
       "verified": "सत्यापित",
       "rejected": "अस्वीकृत",
       "inProgress": "प्रगति में",
-      "resolved": "हल हो गया"
+      "resolved": "हल हो गया",
+      "assigned": "आप सौंपा गया"
     },
     "priorities": {
       "low": "कम",

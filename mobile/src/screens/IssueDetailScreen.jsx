@@ -158,7 +158,7 @@ const IssueDetailScreen = ({ route, navigation }) => {
         <View style={styles.actions}>
           <TouchableOpacity style={styles.actionButton} onPress={handleUpvote}>
             <Icon 
-              name={issue.userHasUpvoted ? 'thumb-up' : 'thumb-up-outline'} 
+              name={issue.userHasUpvoted ? 'thumbs-up' : 'thumbs-up-outline'} 
               size={24} 
               color={issue.userHasUpvoted ? '#2563eb' : '#6b7280'} 
             />

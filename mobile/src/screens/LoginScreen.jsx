@@ -15,6 +15,7 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import LanguageSelector from '../components/LanguageSelector';
 
 const LoginScreen = ({ navigation }) => {
   const { t } = useTranslation();
@@ -29,15 +30,15 @@ const LoginScreen = ({ navigation }) => {
     const newErrors = {};
     
     if (!email) {
-      newErrors.email = t('email_required');
+      newErrors.email = t('validation.required');
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = t('email_invalid');
+      newErrors.email = t('validation.invalidEmail');
     }
     
     if (!password) {
-      newErrors.password = t('password_required');
+      newErrors.password = t('validation.required');
     } else if (password.length < 6) {
-      newErrors.password = t('password_min_length');
+      newErrors.password = t('validation.passwordTooShort');
     }
     
     setErrors(newErrors);
@@ -54,10 +55,10 @@ const LoginScreen = ({ navigation }) => {
       if (result.success) {
         // Navigation handled by AuthContext
       } else if (result.error) {
-        Alert.alert(t('login_failed'), result.error);
+        Alert.alert(t('auth.loginFailed'), result.error);
       }
     } catch (error) {
-      Alert.alert(t('error'), t('unexpected_error'));
+      Alert.alert(t('common.error'), t('toast.pleaseRetry'));
     } finally {
       setLoading(false);
     }
@@ -73,25 +74,28 @@ const LoginScreen = ({ navigation }) => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="arrow-back" size={24} color="#1f2937" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('welcome_back')}</Text>
-          <Text style={styles.headerSubtitle}>{t('sign_in_to_continue')}</Text>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Icon name="arrow-back" size={24} color="#1f2937" />
+            </TouchableOpacity>
+            <LanguageSelector />
+          </View>
+          <Text style={styles.headerTitle}>{t('auth.welcomeBack')}</Text>
+          <Text style={styles.headerSubtitle}>{t('auth.signInToContinue')}</Text>
         </View>
 
         <View style={styles.form}>
           {/* Email Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>{t('email_address')}</Text>
+            <Text style={styles.label}>{t('auth.email')}</Text>
             <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
               <Icon name="mail-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder={t('enter_your_email')}
+                placeholder={t('auth.email')}
                 placeholderTextColor="#9ca3af"
                 value={email}
                 onChangeText={(text) => {
@@ -110,12 +114,12 @@ const LoginScreen = ({ navigation }) => {
 
           {/* Password Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>{t('password')}</Text>
+            <Text style={styles.label}>{t('auth.password')}</Text>
             <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
               <Icon name="lock-closed-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder={t('enter_your_password')}
+                placeholder={t('auth.password')}
                 placeholderTextColor="#9ca3af"
                 value={password}
                 onChangeText={(text) => {
@@ -144,7 +148,7 @@ const LoginScreen = ({ navigation }) => {
 
           {/* Forgot Password */}
           <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>{t('forgot_password')}</Text>
+            <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
 
           {/* Login Button */}
@@ -156,22 +160,22 @@ const LoginScreen = ({ navigation }) => {
             {loading ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text style={styles.loginButtonText}>{t('sign_in')}</Text>
+              <Text style={styles.loginButtonText}>{t('auth.signIn')}</Text>
             )}
           </TouchableOpacity>
 
           {/* Divider */}
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t('or')}</Text>
+            <Text style={styles.dividerText}>{t('auth.and')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
           {/* Register Link */}
           <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>{t('dont_have_account')} </Text>
+            <Text style={styles.registerText}>{t('auth.dontHaveAccount')} </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.registerLink}>{t('sign_up')}</Text>
+              <Text style={styles.registerLink}>{t('auth.signUp')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -193,6 +197,12 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 40,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   backButton: {
     width: 40,
     height: 40,
@@ -200,7 +210,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
   },
   headerTitle: {
     fontSize: 32,

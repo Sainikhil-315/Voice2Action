@@ -13,12 +13,14 @@ import {
   Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { issuesAPI } from '../utils/api';
 import { ISSUE_CATEGORIES, ISSUE_STATUS } from '../utils/constants';
 import { formatRelativeTime, getCategoryInfo } from '../utils/helpers';
 import Toast from 'react-native-toast-message';
 
 const IssueTrackingScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -67,8 +69,8 @@ const IssueTrackingScreen = ({ navigation }) => {
         console.error('Failed to load issues:', error);
         Toast.show({
           type: 'error',
-          text1: 'Failed to load issues',
-          text2: error.response?.data?.message || 'Please try again',
+          text1: t('toast.failedToLoad'),
+          text2: error.response?.data?.message || t('toast.pleaseRetry'),
         });
       } finally {
         setLoading(false);
@@ -84,6 +86,7 @@ const IssueTrackingScreen = ({ navigation }) => {
       selectedCategory,
       selectedStatus,
       issues,
+      t,
     ],
   );
 
@@ -122,8 +125,47 @@ const IssueTrackingScreen = ({ navigation }) => {
     }
   };
 
+  const getCategoryIcon = (category) => {
+    const iconMap = {
+      'road_maintenance': 'car-outline',
+      'waste_management': 'trash-outline',
+      'water_supply': 'water-outline',
+      'electricity': 'flash-outline',
+      'fire_safety': 'flame-outline',
+      'public_transport': 'bus-outline',
+      'parks_recreation': 'leaf-outline',
+      'street_lighting': 'bulb-outline',
+      'drainage': 'rainy-outline',
+      'noise_pollution': 'volume-high-outline',
+      'illegal_construction': 'construct-outline',
+      'animal_control': 'paw-outline',
+      'other': 'list-outline'
+    };
+    return iconMap[category] || 'help-outline';
+  };
+
+  const getCategoryColor = (category) => {
+    const colorMap = {
+      'road_maintenance': '#f97316',
+      'waste_management': '#10b981',
+      'water_supply': '#3b82f6',
+      'electricity': '#fbbf24',
+      'fire_safety': '#ef4444',
+      'public_transport': '#8b5cf6',
+      'parks_recreation': '#22c55e',
+      'street_lighting': '#eab308',
+      'drainage': '#06b6d4',
+      'noise_pollution': '#dc2626',
+      'illegal_construction': '#ea580c',
+      'animal_control': '#92400e',
+      'other': '#6b7280'
+    };
+    return colorMap[category] || '#6b7280';
+  };
+
   const renderIssueCard = ({ item }) => {
-    const categoryInfo = getCategoryInfo(item.category);
+    const categoryIcon = getCategoryIcon(item.category);
+    const categoryColor = getCategoryColor(item.category);
 
     return (
       <TouchableOpacity
@@ -131,14 +173,14 @@ const IssueTrackingScreen = ({ navigation }) => {
         onPress={() => navigation.navigate('IssueDetail', { id: item._id })}
       >
         <View style={styles.issueHeader}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryIcon}>{categoryInfo.icon}</Text>
+          <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '20' }]}>
+            <Icon name={categoryIcon} size={20} color={categoryColor} />
           </View>
           <View
             style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}
           >
             <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-              {item.status.replace('_', ' ')}
+              {t(`issues.statuses.${item.status.replace('_', '')}`)}
             </Text>
           </View>
         </View>
@@ -148,13 +190,13 @@ const IssueTrackingScreen = ({ navigation }) => {
 
         {/* Authority and Estimated Time */}
         <View style={styles.geminiRow}>
-          <Text style={styles.geminiLabel}>Authority:</Text>
+          <Text style={styles.geminiLabel}>{t('issues.authority')}:</Text>
           <Text style={styles.geminiValue}>
             {item.assignedTo?.name ? item.assignedTo.name : '❓'}
           </Text>
         </View>
         <View style={styles.geminiRow}>
-          <Text style={styles.geminiLabel}>Est. Resolution:</Text>
+          <Text style={styles.geminiLabel}>{t('issues.estResolution')}:</Text>
           <Text style={styles.geminiValue}>
             {item.expectedResolutionTime ? new Date(item.expectedResolutionTime).toLocaleString() : '❓'}
           </Text>
@@ -164,7 +206,7 @@ const IssueTrackingScreen = ({ navigation }) => {
           <View style={styles.issueStats}>
             <Icon name="location" size={14} color="#6b7280" />
             <Text style={styles.issueStatText} numberOfLines={1}>
-              {item.location?.address || 'Location not specified'}
+              {item.location?.address || t('issues.locationAdded')}
             </Text>
           </View>
           <View style={styles.issueMetrics}>
@@ -196,7 +238,7 @@ const IssueTrackingScreen = ({ navigation }) => {
         />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search your issues..."
+          placeholder={t('issues.searchIssues')}
           placeholderTextColor="#9ca3af"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -212,7 +254,7 @@ const IssueTrackingScreen = ({ navigation }) => {
       <View style={styles.filtersContainer}>
         {/* Category Filter */}
         <View style={styles.filterSection}>
-          <Text style={styles.filterLabel}>Category</Text>
+          <Text style={styles.filterLabel}>{t('issues.category')}</Text>
 
           <TouchableOpacity
             style={styles.categorySelector}
@@ -220,17 +262,24 @@ const IssueTrackingScreen = ({ navigation }) => {
           >
             {selectedCategory ? (
               <View style={styles.categorySelectorContent}>
-                <Text style={styles.categorySelectorIcon}>
-                  {getSelectedCategory()?.icon}
-                </Text>
+                <View style={[styles.categorySelectorIconWrapper, { backgroundColor: getCategoryColor(selectedCategory) + '20' }]}>
+                  <Icon 
+                    name={getCategoryIcon(selectedCategory)} 
+                    size={18} 
+                    color={getCategoryColor(selectedCategory)} 
+                  />
+                </View>
                 <Text style={styles.categorySelectorText}>
-                  {getSelectedCategory()?.label}
+                  {t(`issues.categories.${getSelectedCategory()?.value}`)}
                 </Text>
               </View>
             ) : (
-              <Text style={styles.categorySelectorPlaceholder}>
-                All Categories
-              </Text>
+              <View style={styles.categorySelectorContent}>
+                <Icon name="apps-outline" size={18} color="#6b7280" />
+                <Text style={styles.categorySelectorPlaceholder}>
+                  {t('issues.allCategories')}
+                </Text>
+              </View>
             )}
             <Icon name="chevron-down" size={18} color="#9ca3af" />
           </TouchableOpacity>
@@ -238,7 +287,7 @@ const IssueTrackingScreen = ({ navigation }) => {
 
         {/* Status Filter */}
         <View style={styles.filterSection}>
-          <Text style={styles.filterLabel}>Status</Text>
+          <Text style={styles.filterLabel}>{t('issues.status')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <TouchableOpacity
               style={[
@@ -253,7 +302,7 @@ const IssueTrackingScreen = ({ navigation }) => {
                   !selectedStatus && styles.filterChipTextActive,
                 ]}
               >
-                All
+                {t('common.viewAll')}
               </Text>
             </TouchableOpacity>
             {ISSUE_STATUS.map(status => (
@@ -272,7 +321,7 @@ const IssueTrackingScreen = ({ navigation }) => {
                       styles.filterChipTextActive,
                   ]}
                 >
-                  {status.label}
+                  {t(`issues.statuses.${status.value.replace('_', '')}`)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -288,7 +337,7 @@ const IssueTrackingScreen = ({ navigation }) => {
             }}
           >
             <Icon name="close-circle" size={16} color="#ef4444" />
-            <Text style={styles.clearFiltersText}>Clear Filters</Text>
+            <Text style={styles.clearFiltersText}>{t('common.clear')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -298,18 +347,18 @@ const IssueTrackingScreen = ({ navigation }) => {
   const renderEmpty = () => (
     <View style={styles.emptyState}>
       <Icon name="file-tray-outline" size={64} color="#d1d5db" />
-      <Text style={styles.emptyStateTitle}>No Issues Found</Text>
+      <Text style={styles.emptyStateTitle}>{t('issues.noIssuesFound')}</Text>
       <Text style={styles.emptyStateText}>
         {searchQuery || selectedCategory || selectedStatus
-          ? 'Try adjusting your filters'
-          : 'Start by reporting your first issue'}
+          ? t('issues.adjustFilters')
+          : t('dashboard.reportFirstIssue')}
       </Text>
       {!searchQuery && !selectedCategory && !selectedStatus && (
         <TouchableOpacity
           style={styles.emptyStateButton}
           onPress={() => navigation.navigate('IssueForm')}
         >
-          <Text style={styles.emptyStateButtonText}>Report Issue</Text>
+          <Text style={styles.emptyStateButtonText}>{t('dashboard.reportIssue')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -327,7 +376,7 @@ const IssueTrackingScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <Text style={styles.title}>My Issues</Text>
+        <Text style={styles.title}>{t('dashboard.myIssues')}</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => navigation.navigate('IssueForm')}
@@ -356,9 +405,10 @@ const IssueTrackingScreen = ({ navigation }) => {
       {loading && issues.length === 0 && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Loading issues...</Text>
+          <Text style={styles.loadingText}>{t('issues.loadingIssues')}</Text>
         </View>
       )}
+      
       <Modal
         visible={showCategoryModal}
         transparent
@@ -368,7 +418,7 @@ const IssueTrackingScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Category</Text>
+              <Text style={styles.modalTitle}>{t('issues.selectCategory')}</Text>
               <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
                 <Icon name="close" size={24} color="#1f2937" />
               </TouchableOpacity>
@@ -385,34 +435,48 @@ const IssueTrackingScreen = ({ navigation }) => {
                   setShowCategoryModal(false);
                 }}
               >
-                <Text style={styles.categoryOptionText}>All Categories</Text>
+                <View style={styles.categoryOptionLeft}>
+                  <View style={styles.categoryModalIcon}>
+                    <Icon name="apps-outline" size={20} color="#6b7280" />
+                  </View>
+                  <Text style={styles.categoryOptionText}>{t('issues.allCategories')}</Text>
+                </View>
                 {!selectedCategory && (
                   <Icon name="checkmark-circle" size={22} color="#2563eb" />
                 )}
               </TouchableOpacity>
 
-              {ISSUE_CATEGORIES.map(cat => (
-                <TouchableOpacity
-                  key={cat.value}
-                  style={[
-                    styles.categoryOption,
-                    selectedCategory === cat.value &&
-                      styles.categoryOptionSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedCategory(cat.value);
-                    setShowCategoryModal(false);
-                  }}
-                >
-                  <View style={styles.categoryOptionLeft}>
-                    <Text style={styles.categoryOptionIcon}>{cat.icon}</Text>
-                    <Text style={styles.categoryOptionText}>{cat.label}</Text>
-                  </View>
-                  {selectedCategory === cat.value && (
-                    <Icon name="checkmark-circle" size={22} color="#2563eb" />
-                  )}
-                </TouchableOpacity>
-              ))}
+              {ISSUE_CATEGORIES.map(cat => {
+                const categoryIcon = getCategoryIcon(cat.value);
+                const categoryColor = getCategoryColor(cat.value);
+                
+                return (
+                  <TouchableOpacity
+                    key={cat.value}
+                    style={[
+                      styles.categoryOption,
+                      selectedCategory === cat.value &&
+                        styles.categoryOptionSelected,
+                    ]}
+                    onPress={() => {
+                      setSelectedCategory(cat.value);
+                      setShowCategoryModal(false);
+                    }}
+                  >
+                    <View style={styles.categoryOptionLeft}>
+                      <View style={[styles.categoryModalIcon, { backgroundColor: categoryColor + '20' }]}>
+                        <Icon name={categoryIcon} size={20} color={categoryColor} />
+                      </View>
+                      <Text style={styles.categoryOptionText}>
+                        {t(`issues.categories.${cat.value}`)}
+                      </Text>
+                    </View>
+                    {selectedCategory === cat.value && (
+                      <Icon name="checkmark-circle" size={22} color="#2563eb" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
@@ -422,62 +486,25 @@ const IssueTrackingScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-    geminiRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 2,
-      marginTop: 2,
-    },
-    geminiLabel: {
-      fontWeight: '600',
-      color: '#374151',
-      marginRight: 8,
-      fontSize: 13,
-      width: 90,
-    },
-    geminiValue: {
-      color: '#1f2937',
-      fontSize: 13,
-      flex: 1,
-      flexWrap: 'wrap',
-    },
-    geminiModalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    geminiModalContent: {
-      backgroundColor: '#fff',
-      borderRadius: 16,
-      padding: 24,
-      alignItems: 'center',
-      width: '80%',
-      elevation: 4,
-    },
-    geminiModalTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: '#ef4444',
-      marginBottom: 12,
-    },
-    geminiModalReason: {
-      fontSize: 16,
-      color: '#374151',
-      marginBottom: 20,
-      textAlign: 'center',
-    },
-    geminiModalButton: {
-      backgroundColor: '#2563eb',
-      borderRadius: 8,
-      paddingHorizontal: 24,
-      paddingVertical: 10,
-    },
-    geminiModalButtonText: {
-      color: '#fff',
-      fontWeight: '600',
-      fontSize: 16,
-    },
+  geminiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+    marginTop: 2,
+  },
+  geminiLabel: {
+    fontWeight: '600',
+    color: '#374151',
+    marginRight: 8,
+    fontSize: 13,
+    width: 90,
+  },
+  geminiValue: {
+    color: '#1f2937',
+    fontSize: 13,
+    flex: 1,
+    flexWrap: 'wrap',
+  },
   categorySelector: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -506,7 +533,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -545,10 +571,15 @@ const styles = StyleSheet.create({
   categoryOptionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
-  categoryOptionIcon: {
-    fontSize: 18,
+  categoryModalIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   categoryOptionText: {
     fontSize: 16,
@@ -629,10 +660,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#eff6ff',
     borderColor: '#2563eb',
   },
-  filterChipIcon: {
-    fontSize: 14,
-    marginRight: 4,
-  },
   filterChipText: {
     fontSize: 13,
     color: '#374151',
@@ -669,15 +696,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   categoryBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  categoryIcon: {
-    fontSize: 18,
   },
   statusBadge: {
     paddingHorizontal: 10,

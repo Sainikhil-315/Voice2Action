@@ -162,25 +162,36 @@
     "markRead": "Mark Read",
     "categories": {
       "roadMaintenance": "Road Maintenance",
+      "roadmaintenance": "Road Maintenance",
       "wasteManagement": "Waste Management",
+      "wastemanagement": "Waste Management",
       "waterSupply": "Water Supply",
+      "watersupply": "Water Supply",
       "electricity": "Electricity",
       "fireSafety": "Fire Safety",
+      "firesafety": "Fire Safety",
       "publicTransport": "Public Transport",
+      "publictransport": "Public Transport",
       "parksRecreation": "Parks & Recreation",
+      "parksrecreation": "Parks & Recreation",
       "streetLighting": "Street Lighting",
+      "streetlighting": "Street Lighting",
       "drainage": "Drainage",
       "noisePollution": "Noise Pollution",
+      "noisepollution": "Noise Pollution",
       "illegalConstruction": "Illegal Construction",
+      "illegalconstruction": "Illegal Construction",
       "animalControl": "Animal Control",
+      "animalcontrol": "Animal Control",
       "other": "Other"
     },
     "statuses": {
       "pending": "Pending",
       "verified": "Verified",
       "rejected": "Rejected",
-      "inProgress": "In Progress",
-      "resolved": "Resolved"
+      "inprogress": "In progress",
+      "resolved": "Resolved",
+      "assigned": "Assigned"
     },
     "priorities": {
       "low": "Low",

@@ -10,10 +10,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { issuesAPI } from '../utils/api';
+import LanguageSelector from '../components/LanguageSelector';
 
 const ProfileScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
 
   const [stats, setStats] = useState({
@@ -30,33 +33,24 @@ const ProfileScreen = ({ navigation }) => {
   const fetchStats = async () => {
     setStatsLoading(true);
     try {
-      /**
-       * API CALLS (REAL BACKEND)
-       * 1. /issues/stats/overview  -> issues, resolved, points
-       * 2. /issues/my/issues       -> fallback + verification
-       */
       const [statsRes, myIssuesRes] = await Promise.all([
         issuesAPI.getStats(),
         issuesAPI.getMyIssues({ limit: 100 }),
       ]);
 
-      // ---- Parse stats overview ----
       const overview = statsRes?.data || statsRes || {};
-      console.log("🔍 Fetched stats overview:", overview.data.overview.total);
-      // ---- Parse my issues ----
       const issuesData = myIssuesRes?.data?.data || myIssuesRes?.data || {};
       const issuesList = issuesData.issues || [];
-      console.log("🔍 Fetched issues for stats:", issuesList);
+      
       const resolvedCount = issuesList.filter(
         (issue) => issue.status === 'resolved'
       ).length;
 
       setStats({
-        issues: overview.data.overview.total ?? issuesList.length ?? 0,
+        issues: overview.data?.overview?.total ?? issuesList.length ?? 0,
         resolved: overview.resolvedIssues ?? resolvedCount ?? 0,
         points: overview.totalPoints ?? 0,
       });
-      console.log("✅ Profile stats fetched:", overview);
     } catch (error) {
       console.log('❌ Profile stats error:', error);
       setStats({ issues: 0, resolved: 0, points: 0 });
@@ -67,28 +61,49 @@ const ProfileScreen = ({ navigation }) => {
 
   const handleLogout = () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('auth.logout'),
+      t('auth.logoutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: logout },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('auth.logout'), style: 'destructive', onPress: logout },
       ]
     );
   };
 
   const menuItems = [
-    { icon: 'create', label: 'Edit Profile', onPress: () => {} },
-    { icon: 'notifications', label: 'Notifications', onPress: () => {} },
-    { icon: 'shield-checkmark', label: 'Privacy & Security', onPress: () => {} },
-    { icon: 'help-circle', label: 'Help & Support', onPress: () => {} },
-    { icon: 'information', label: 'About', onPress: () => {} },
+    { 
+      icon: 'create', 
+      label: t('profile.editProfile'), 
+      onPress: () => {} 
+    },
+    { 
+      icon: 'notifications', 
+      label: t('profile.notifications'), 
+      onPress: () => navigation.navigate('Notifications')
+    },
+    { 
+      icon: 'shield-checkmark', 
+      label: t('profile.privacySecurity'), 
+      onPress: () => {} 
+    },
+    { 
+      icon: 'help-circle', 
+      label: t('profile.helpSupport'), 
+      onPress: () => {} 
+    },
+    { 
+      icon: 'information', 
+      label: t('profile.about'), 
+      onPress: () => {} 
+    },
   ];
 
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+        <LanguageSelector style={styles.languageSelector} />
       </View>
 
       {/* Profile Card */}
@@ -112,19 +127,19 @@ const ProfileScreen = ({ navigation }) => {
         {/* Stats */}
         <View style={styles.statsRow}>
           <StatItem
-            label="Issues"
+            label={t('profile.issues')}
             value={stats.issues}
             loading={statsLoading}
           />
           <View style={styles.statDivider} />
           <StatItem
-            label="Resolved"
+            label={t('profile.resolved')}
             value={stats.resolved}
             loading={statsLoading}
           />
           <View style={styles.statDivider} />
           <StatItem
-            label="Points"
+            label={t('profile.points')}
             value={stats.points}
             loading={statsLoading}
           />
@@ -153,10 +168,10 @@ const ProfileScreen = ({ navigation }) => {
       {/* Logout */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Icon name="log-out" size={20} color="#ef4444" />
-        <Text style={styles.logoutText}>Logout</Text>
+        <Text style={styles.logoutText}>{t('profile.logout')}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.version}>Version 1.0.0</Text>
+      <Text style={styles.version}>{t('profile.version')} 1.0.0</Text>
     </ScrollView>
   );
 };
@@ -177,12 +192,18 @@ const StatItem = ({ label, value, loading }) => (
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
     backgroundColor: '#ffffff',
   },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1f2937' },
+  languageSelector: {
+    marginLeft: 12,
+  },
 
   profileCard: {
     backgroundColor: '#ffffff',

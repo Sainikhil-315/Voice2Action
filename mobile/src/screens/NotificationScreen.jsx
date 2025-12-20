@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { useNotifications } from '../context/NotificationContext';
 import { formatRelativeTime } from '../utils/helpers';
 
 const NotificationsScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const {
     notifications,
     unreadCount,
@@ -99,7 +101,7 @@ const NotificationsScreen = ({ navigation }) => {
               }}
             >
               <Icon name="checkmark" size={18} color="#10b981" />
-              <Text style={styles.actionButtonText}>Mark Read</Text>
+              <Text style={styles.actionButtonText}>{t('notifications.markRead')}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -111,7 +113,7 @@ const NotificationsScreen = ({ navigation }) => {
           >
             <Icon name="trash-outline" size={18} color="#ef4444" />
             <Text style={[styles.actionButtonText, { color: '#ef4444' }]}>
-              Delete
+              {t('notifications.delete')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -122,9 +124,9 @@ const NotificationsScreen = ({ navigation }) => {
   const renderHeader = () => (
     <View style={styles.header}>
       <View>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
         {unreadCount > 0 && (
-          <Text style={styles.headerSubtitle}>{unreadCount} unread</Text>
+          <Text style={styles.headerSubtitle}>{unreadCount} {t('notifications.unread')}</Text>
         )}
       </View>
       {notifications.length > 0 && unreadCount > 0 && (
@@ -133,7 +135,7 @@ const NotificationsScreen = ({ navigation }) => {
           onPress={markAllAsRead}
         >
           <Icon name="checkmark-done" size={20} color="#2563eb" />
-          <Text style={styles.markAllButtonText}>Mark All Read</Text>
+          <Text style={styles.markAllButtonText}>{t('notifications.markAllRead')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -142,9 +144,9 @@ const NotificationsScreen = ({ navigation }) => {
   const renderEmpty = () => (
     <View style={styles.emptyState}>
       <Icon name="notifications-off-outline" size={64} color="#d1d5db" />
-      <Text style={styles.emptyStateTitle}>No Notifications</Text>
+      <Text style={styles.emptyStateTitle}>{t('notifications.noNotifications')}</Text>
       <Text style={styles.emptyStateText}>
-        You're all caught up! Check back later for updates.
+        {t('notifications.allCaughtUp')}
       </Text>
     </View>
   );
@@ -158,14 +160,14 @@ const NotificationsScreen = ({ navigation }) => {
         >
           <Icon name="arrow-back" size={24} color="#1f2937" />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Notifications</Text>
+        <Text style={styles.topBarTitle}>{t('notifications.title')}</Text>
         <View style={styles.placeholder} />
       </View>
 
       {loading && notifications.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#2563eb" />
-          <Text style={styles.loadingText}>Loading notifications...</Text>
+          <Text style={styles.loadingText}>{t('notifications.loadingNotifications')}</Text>
         </View>
       ) : (
         <FlatList

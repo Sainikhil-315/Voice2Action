@@ -6,14 +6,15 @@ import {
   FlatList,
   RefreshControl,
   Image,
-  TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import { leaderboardAPI } from '../utils/api';
 
 const LeaderboardScreen = () => {
+  const { t } = useTranslation();
   const [leaders, setLeaders] = useState([]);
   const [stats, setStats] = useState({
     totalIssues: 0,
@@ -32,11 +33,9 @@ const LeaderboardScreen = () => {
       const response = await leaderboardAPI.getMonthly();
       console.log('Leaderboard Response:', response.data);
       
-      // Extract leaderboard data
       const leaderboardData = response.data?.data?.leaderboard || [];
       setLeaders(leaderboardData);
       
-      // Extract stats - handle both possible response structures
       const statsData = response.data?.data?.stats || {};
       setStats({
         totalIssues: statsData.totalIssues || statsData.overview?.total || 0,
@@ -88,7 +87,7 @@ const LeaderboardScreen = () => {
             <Text style={styles.podiumName} numberOfLines={1}>
               {top3[1].name || 'User'}
             </Text>
-            <Text style={styles.podiumPoints}>{top3[1].points || 0} pts</Text>
+            <Text style={styles.podiumPoints}>{top3[1].points || 0} {t('leaderboard.pts')}</Text>
           </View>
         )}
 
@@ -110,7 +109,7 @@ const LeaderboardScreen = () => {
             <Text style={styles.podiumName} numberOfLines={1}>
               {top3[0].name || 'User'}
             </Text>
-            <Text style={styles.podiumPoints}>{top3[0].points || 0} pts</Text>
+            <Text style={styles.podiumPoints}>{top3[0].points || 0} {t('leaderboard.pts')}</Text>
           </View>
         )}
 
@@ -132,7 +131,7 @@ const LeaderboardScreen = () => {
             <Text style={styles.podiumName} numberOfLines={1}>
               {top3[2].name || 'User'}
             </Text>
-            <Text style={styles.podiumPoints}>{top3[2].points || 0} pts</Text>
+            <Text style={styles.podiumPoints}>{top3[2].points || 0} {t('leaderboard.pts')}</Text>
           </View>
         )}
       </View>
@@ -147,13 +146,13 @@ const LeaderboardScreen = () => {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <Text style={styles.statsTitle}>Community Impact</Text>
+        <Text style={styles.statsTitle}>{t('leaderboard.communityImpact')}</Text>
       </LinearGradient>
       
       <View style={styles.statsContent}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{stats.totalIssues}</Text>
-          <Text style={styles.statLabel}>Total Issues</Text>
+          <Text style={styles.statLabel}>{t('leaderboard.totalIssues')}</Text>
         </View>
         
         <View style={styles.statDivider} />
@@ -162,7 +161,7 @@ const LeaderboardScreen = () => {
           <Text style={[styles.statValue, { color: '#10b981' }]}>
             {stats.resolvedIssues}
           </Text>
-          <Text style={styles.statLabel}>Resolved</Text>
+          <Text style={styles.statLabel}>{t('leaderboard.resolved')}</Text>
         </View>
         
         <View style={styles.statDivider} />
@@ -171,13 +170,13 @@ const LeaderboardScreen = () => {
           <Text style={[styles.statValue, { color: '#8b5cf6' }]}>
             {stats.activeContributors}
           </Text>
-          <Text style={styles.statLabel}>Contributors</Text>
+          <Text style={styles.statLabel}>{t('leaderboard.contributors')}</Text>
         </View>
       </View>
       
       <View style={styles.resolutionRateContainer}>
         <View style={styles.resolutionRateHeader}>
-          <Text style={styles.resolutionRateLabel}>Resolution Rate</Text>
+          <Text style={styles.resolutionRateLabel}>{t('leaderboard.resolutionRate')}</Text>
           <Text style={styles.resolutionRateValue}>
             {calculateResolutionRate()}%
           </Text>
@@ -211,11 +210,11 @@ const LeaderboardScreen = () => {
           <View style={styles.leaderInfo}>
             <Text style={styles.leaderName}>{item.name || 'User'}</Text>
             <Text style={styles.leaderStats}>
-              {item.issueCount || 0} issues • {item.resolvedCount || 0} resolved
+              {item.issueCount || 0} {t('leaderboard.issues')} • {item.resolvedCount || 0} {t('leaderboard.resolvedCount')}
             </Text>
           </View>
         </View>
-        <Text style={styles.leaderPoints}>{item.points || 0} pts</Text>
+        <Text style={styles.leaderPoints}>{item.points || 0} {t('leaderboard.pts')}</Text>
       </View>
     );
   };
@@ -224,7 +223,7 @@ const LeaderboardScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Loading leaderboard...</Text>
+        <Text style={styles.loadingText}>{t('leaderboard.loadingLeaderboard')}</Text>
       </View>
     );
   }
@@ -232,8 +231,8 @@ const LeaderboardScreen = () => {
   return (
     <View style={styles.container}>
       <LinearGradient colors={['#2563eb', '#1e40af']} style={styles.header}>
-        <Text style={styles.headerTitle}>Leaderboard</Text>
-        <Text style={styles.headerSubtitle}>Top Community Contributors</Text>
+        <Text style={styles.headerTitle}>{t('leaderboard.title')}</Text>
+        <Text style={styles.headerSubtitle}>{t('leaderboard.subtitle')}</Text>
       </LinearGradient>
 
       <FlatList
@@ -246,7 +245,7 @@ const LeaderboardScreen = () => {
             {renderStatsCard()}
             {leaders.length > 3 && (
               <View style={styles.listHeader}>
-                <Text style={styles.listHeaderText}>All Rankings</Text>
+                <Text style={styles.listHeaderText}>{t('leaderboard.allRankings')}</Text>
               </View>
             )}
           </>
@@ -259,9 +258,9 @@ const LeaderboardScreen = () => {
           !loading && (
             <View style={styles.emptyContainer}>
               <Icon name="trophy-outline" size={64} color="#d1d5db" />
-              <Text style={styles.emptyText}>No leaderboard data yet</Text>
+              <Text style={styles.emptyText}>{t('leaderboard.noData')}</Text>
               <Text style={styles.emptySubtext}>
-                Be the first to report an issue!
+                {t('leaderboard.beFirst')}
               </Text>
             </View>
           )

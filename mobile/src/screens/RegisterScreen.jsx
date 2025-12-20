@@ -13,9 +13,12 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import LanguageSelector from '../components/LanguageSelector';
 
 const RegisterScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const { register } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
@@ -40,31 +43,31 @@ const RegisterScreen = ({ navigation }) => {
     const newErrors = {};
     
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('validation.required');
     } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+      newErrors.name = t('validation.required');
     }
     
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('validation.required');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = t('validation.invalidEmail');
     }
     
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('validation.required');
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = t('validation.passwordTooShort');
     } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, and number';
+      newErrors.password = t('auth.passwordHelper');
     }
     
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('validation.passwordsDoNotMatch');
     }
     
     if (formData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone number is invalid';
+      newErrors.phone = t('validation.invalidPhone');
     }
     
     setErrors(newErrors);
@@ -86,10 +89,10 @@ const RegisterScreen = ({ navigation }) => {
       if (result.success) {
         // Navigation handled by AuthContext
       } else if (result.error) {
-        Alert.alert('Registration Failed', result.error);
+        Alert.alert(t('auth.registrationFailed'), result.error);
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      Alert.alert(t('common.error'), t('toast.pleaseRetry'));
     } finally {
       setLoading(false);
     }
@@ -105,25 +108,28 @@ const RegisterScreen = ({ navigation }) => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="arrow-left" size={24} color="#1f2937" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create Account</Text>
-          <Text style={styles.headerSubtitle}>Join Voice2Action today</Text>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Icon name="arrow-back" size={24} color="#1f2937" />
+            </TouchableOpacity>
+            <LanguageSelector />
+          </View>
+          <Text style={styles.headerTitle}>{t('auth.createAccount')}</Text>
+          <Text style={styles.headerSubtitle}>{t('auth.joinToday')}</Text>
         </View>
 
         <View style={styles.form}>
           {/* Name Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Full Name *</Text>
+            <Text style={styles.label}>{t('auth.fullName')}</Text>
             <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
               <Icon name="person-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your full name"
+                placeholder={t('auth.fullName')}
                 placeholderTextColor="#9ca3af"
                 value={formData.name}
                 onChangeText={(text) => updateField('name', text)}
@@ -135,12 +141,12 @@ const RegisterScreen = ({ navigation }) => {
 
           {/* Email Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address *</Text>
+            <Text style={styles.label}>{t('auth.email')}</Text>
             <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
-              <Icon name="email-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <Icon name="mail-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your email"
+                placeholder={t('auth.email')}
                 placeholderTextColor="#9ca3af"
                 value={formData.email}
                 onChangeText={(text) => updateField('email', text)}
@@ -153,12 +159,12 @@ const RegisterScreen = ({ navigation }) => {
 
           {/* Phone Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone Number (Optional)</Text>
+            <Text style={styles.label}>{t('auth.phone')} ({t('auth.optional')})</Text>
             <View style={[styles.inputWrapper, errors.phone && styles.inputError]}>
-              <Icon name="phone-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <Icon name="call-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Enter your phone number"
+                placeholder={t('auth.phone')}
                 placeholderTextColor="#9ca3af"
                 value={formData.phone}
                 onChangeText={(text) => updateField('phone', text)}
@@ -170,12 +176,12 @@ const RegisterScreen = ({ navigation }) => {
 
           {/* Password Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password *</Text>
+            <Text style={styles.label}>{t('auth.password')}</Text>
             <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-              <Icon name="lock-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <Icon name="lock-closed-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Create a password"
+                placeholder={t('auth.password')}
                 placeholderTextColor="#9ca3af"
                 value={formData.password}
                 onChangeText={(text) => updateField('password', text)}
@@ -195,18 +201,18 @@ const RegisterScreen = ({ navigation }) => {
             </View>
             {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
             <Text style={styles.helperText}>
-              Must be 8+ characters with uppercase, lowercase, and number
+              {t('auth.passwordHelper')}
             </Text>
           </View>
 
           {/* Confirm Password Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm Password *</Text>
+            <Text style={styles.label}>{t('auth.confirmPassword')}</Text>
             <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
-              <Icon name="lock-outline" size={20} color="#6b7280" style={styles.inputIcon} />
+              <Icon name="lock-closed-outline" size={20} color="#6b7280" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Confirm your password"
+                placeholder={t('auth.confirmPassword')}
                 placeholderTextColor="#9ca3af"
                 value={formData.confirmPassword}
                 onChangeText={(text) => updateField('confirmPassword', text)}
@@ -238,22 +244,22 @@ const RegisterScreen = ({ navigation }) => {
             {loading ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text style={styles.registerButtonText}>Create Account</Text>
+              <Text style={styles.registerButtonText}>{t('auth.createAccount')}</Text>
             )}
           </TouchableOpacity>
 
           {/* Terms */}
           <Text style={styles.termsText}>
-            By creating an account, you agree to our{' '}
-            <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-            <Text style={styles.termsLink}>Privacy Policy</Text>
+            {t('auth.termsAgree')}{' '}
+            <Text style={styles.termsLink}>{t('auth.termsOfService')}</Text> {t('auth.and')}{' '}
+            <Text style={styles.termsLink}>{t('auth.privacyPolicy')}</Text>
           </Text>
 
           {/* Login Link */}
           <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Already have an account? </Text>
+            <Text style={styles.loginText}>{t('auth.alreadyHaveAccount')} </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>Sign In</Text>
+              <Text style={styles.loginLink}>{t('auth.signIn')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -275,6 +281,12 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 32,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   backButton: {
     width: 40,
     height: 40,
@@ -282,7 +294,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
   },
   headerTitle: {
     fontSize: 32,
